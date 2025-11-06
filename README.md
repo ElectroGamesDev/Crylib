@@ -91,4 +91,4 @@ The [`/examples`](./examples) directory contains practical examples demonstratin
 
 Crylib is licensed under the [MIT License](./LICENSE).
 
-This project uses **[bgfx](https://github.com/bkaradzic/bgfx)**, which is licensed under the **BSD-2-Clause License**:
+Crylib uses several third-party libraries. See the [THIRD_PARTY_NOTICES](./THIRD_PARTY_NOTICES) file for license information.
