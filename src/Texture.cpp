@@ -91,28 +91,32 @@ namespace cl
     {
         if (!data || width <= 0 || height <= 0)
         {
-            std::cerr << "[ERROR] Failed to laod texture from memory." << std::endl;
+            std::cerr << "[ERROR] Failed to load texture from memory." << std::endl;
             return false;
         }
 
         // Todo: RGB8 may not be supported on some platforms like mobile or WebGL
         bgfx::TextureFormat::Enum format = bgfx::TextureFormat::RGBA8;
-
+        if (channels == 2)
+            format = bgfx::TextureFormat::RG8;
+        else if (channels == 1)
+            format = bgfx::TextureFormat::R8;
 
         uint64_t flags = 0;
         if (isColorTexture)
             flags |= BGFX_TEXTURE_SRGB;
 
-        const bgfx::Memory* mem = bgfx::copy(data, width * height * 4);
+        const bgfx::Memory* mem = bgfx::copy(data, static_cast<uint32_t>(width * height * channels));
 
         // Todo: Add sampler flag presets, and customs that the user can modify. For example, default, sharp, anisotropic, pixel art, etc.
         m_handle = bgfx::createTexture2D(static_cast<uint16_t>(width), static_cast<uint16_t>(height), false, 1, format, flags, mem);
+
         m_width = width;
         m_height = height;
 
         bool valid = bgfx::isValid(m_handle);
         if (!valid)
-            std::cerr << "[ERROR] Failed to laod texture from memory." << std::endl;
+            std::cerr << "[ERROR] Failed to load texture from memory." << std::endl;
 
         return valid;
     }
