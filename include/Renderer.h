@@ -9,6 +9,16 @@
 
 namespace cl
 {
+    struct RendererState
+    {
+        Window* window;
+        int width;
+        int height;
+        bgfx::ProgramHandle defaultProgram; // Todo: Should likely remove this since default shader is in Shader.h
+        uint32_t clearColor;
+        uint16_t currentViewId = -1;
+    };
+
     bool InitRenderer(Window* window, const Config& config);
     void ShutdownRenderer();
 
@@ -32,4 +42,6 @@ namespace cl
     int GetViewHeight();
 
     static bgfx::ProgramHandle CreateDefaultShader();
+
+    extern RendererState* s_renderer;
 }

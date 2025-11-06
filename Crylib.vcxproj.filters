@@ -117,6 +117,12 @@
     <ClInclude Include="third_party\basis universal\basisu_file_headers.h">
       <Filter>Source Files\third_party\basics universal</Filter>
     </ClInclude>
+    <ClInclude Include="include\Camera2D.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Crylib.cpp">
@@ -175,6 +181,12 @@
     </ClCompile>
     <ClCompile Include="third_party\basis universal\basisu_transcoder.cpp">
       <Filter>Source Files\third_party\basics universal</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Camera2D.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

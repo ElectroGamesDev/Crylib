@@ -153,6 +153,8 @@
   <ItemGroup>
     <ClInclude Include="include\Animation.h" />
     <ClInclude Include="include\Audio.h" />
+    <ClInclude Include="include\Camera.h" />
+    <ClInclude Include="include\Camera2D.h" />
     <ClInclude Include="include\Config.h" />
     <ClInclude Include="include\Crylib.h" />
     <ClInclude Include="include\Input.h" />
@@ -183,6 +185,8 @@
     <ClCompile Include="examples\Test.cpp" />
     <ClCompile Include="src\Animation.cpp" />
     <ClCompile Include="src\Audio.cpp" />
+    <ClCompile Include="src\Camera.cpp" />
+    <ClCompile Include="src\Camera2D.cpp" />
     <ClCompile Include="src\Crylib.cpp" />
     <ClCompile Include="src\Input.cpp" />
     <ClCompile Include="src\loaders\FBXLoader.cpp" />

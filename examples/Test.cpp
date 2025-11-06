@@ -18,15 +18,24 @@ int main()
 
     cl::LoadDefaultShader("shaders/vs_default.bin", "shaders/fs_default.bin");
 
-    //cl::Model* model = cl::LoadModel("models/truck/binary/CesiumMilkTruck.glb");
-    cl::Model* model = cl::LoadModel("models/Tree3.fbx");
+    cl::Model* model = cl::LoadModel("models/truck/binary/CesiumMilkTruck.glb");
+    //cl::Model* model = cl::LoadModel("models/Tree.glb"); // Todo: This isnt loading/rendering properly
+    //cl::Model* model = cl::LoadModel("models/Tree3.fbx");
 
-    model->SetPosition({0,-0.5f,0});
+    //model->SetPosition({0,-0.5f,0});
     model->SetRotation({0, 90, 0});
     //model->SetScale({3,3,3});
 
+    // Camera
+    cl::Camera camera(
+        { 0, 0, -10 }, // Position
+        { 0, 0, 0 }, // Rotation
+        { 0, 1, 0}, // Up
+        false); // Use Target
+
     // Animations
-    //cl::Model* model = cl::LoadModel("models/AnimatedTriangle/AnimatedTriangle.gltf");
+    //cl::Model* model = cl::LoadModel("models/AnimatedTriangle/AnimatedTriangle.gltf"); // Todo: Not working
+    //cl::Model* model = cl::LoadModel("models/Animated Character/Character_anim.fbx"); // Todo: not working
     //model->PlayAnimationByIndex(0, true);
 
     //for (const auto& mesh : model->GetMeshes())
@@ -87,17 +96,17 @@ int main()
     // Effects
     //cl::SetMusicEffect(music, cl::AUDIO_EFFECT_LOWPASS, 500.0f);
 
-    // Camera setup
-    float view[16];  // View matrix
-    float proj[16];  // Projection matrix
+    // Old Camera setup
+    //float view[16];  // View matrix
+    //float proj[16];  // Projection matrix
 
-    // Camera position and orientation
-    bx::Vec3 cameraPos = { 0.0f, 2.0f, -5.0f };   // In front of origin
-    bx::Vec3 target = { 0.0f, 0.0f, 0.0f };    // Look at origin
-    bx::Vec3 up = { 0.0f, 1.0f, 0.0f };    // Up vector
+    //// Camera position and orientation
+    //bx::Vec3 cameraPos = { 0.0f, 2.0f, -5.0f };   // In front of origin
+    //bx::Vec3 target = { 0.0f, 0.0f, 0.0f };    // Look at origin
+    //bx::Vec3 up = { 0.0f, 1.0f, 0.0f };    // Up vector
 
-    bx::mtxLookAt(view, cameraPos, target, up);
-    bx::mtxProj(proj, 60.0f, float(config.windowWidth) / config.windowHeight, 0.1f, 1000.0f, bgfx::getCaps()->homogeneousDepth);
+    //bx::mtxLookAt(view, cameraPos, target, up);
+    //bx::mtxProj(proj, 60.0f, float(config.windowWidth) / config.windowHeight, 0.1f, 1000.0f, bgfx::getCaps()->homogeneousDepth);
 
     // Create uniform handles for camera matrices (assuming Crylib exposes this)
     //static bgfx::UniformHandle u_View = bgfx::createUniform("u_View", bgfx::UniformType::Mat4);
@@ -109,13 +118,46 @@ int main()
         cl::Update();
         cl::BeginFrame();
 
-        cl::Clear(cl::Color(48, 48, 48, 255));
-
         // Update the camera uniforms
-        bgfx::setViewTransform(0, view, proj);
-        //cl::SetViewTransform();
-        //bgfx::setUniform(u_CamPos, &cameraPos.x);
-        cl::GetDefaultShader()->SetUniform("u_CameraPos", {cameraPos.x, cameraPos.y, cameraPos.z}); // Handles creating the uniform if it doesn't exist
+        
+        //bgfx::setViewTransform(0, view, proj); // Now being done in Camera
+
+        // Movement // Todo: add delta time once it's implemented
+        if (cl::Input::IsKeyDown(cl::KeyCode::W))
+            camera.MoveForward(0.005f);
+
+        if (cl::Input::IsKeyDown(cl::KeyCode::A))
+            camera.MoveLeft(0.005f);
+
+        if (cl::Input::IsKeyDown(cl::KeyCode::S))
+            camera.MoveBackward(0.005f);
+
+        if (cl::Input::IsKeyDown(cl::KeyCode::D))
+            camera.MoveRight(0.005f);
+
+        // Mouse Look
+        static float lookSensitivity = 0.1f;
+        cl::Vector3 camRotation = camera.GetRotation();
+        float deltaX = cl::Input::GetMouseDelta().x;
+        float deltaY = cl::Input::GetMouseDelta().y;
+
+        // Apply mouse deltas
+        camRotation.y += deltaX * lookSensitivity;
+        camRotation.x += deltaY * lookSensitivity;
+
+        // Clamp pitch to avoid flipping
+        if (camRotation.x > 89.0f) camRotation.x = 89.0f;
+        if (camRotation.x < -89.0f) camRotation.x = -89.0f;
+
+        // Apply rotation
+        camera.Rotate(camRotation);
+
+        // Rendering
+        camera.Begin();
+
+        cl::Clear(cl::Color(48, 48, 48, 255)); // Must go after camera.Begin()
+
+        cl::GetDefaultShader()->SetUniform("u_CameraPos", { camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z });
 
 
         // Animations

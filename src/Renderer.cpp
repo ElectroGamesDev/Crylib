@@ -11,16 +11,7 @@ namespace cl
 {
     static bgfx::UniformHandle u_BoneMatrices = BGFX_INVALID_HANDLE;
 
-    struct RendererState
-    {
-        Window* window;
-        int width;
-        int height;
-        bgfx::ProgramHandle defaultProgram; // Todo: Should likely remove this since default shader is in Shader.h
-        uint32_t clearColor;
-    };
-
-    static RendererState* s_renderer = nullptr;
+    RendererState* s_renderer = nullptr;
 
     bool InitRenderer(Window* window, const Config& config)
     {
@@ -74,8 +65,8 @@ namespace cl
         }
 
         // Set view rectangle
-        bgfx::setViewRect(0, 0, 0, uint16_t(s_renderer->width), uint16_t(s_renderer->height));
-        bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x000000ff, 1.0f, 0);
+        //bgfx::setViewRect(0, 0, 0, uint16_t(s_renderer->width), uint16_t(s_renderer->height));
+        //bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x000000ff, 1.0f, 0);
 
         // Todo: Likely remove this and CreateDefautlShader()
         // Create default shader
@@ -109,11 +100,14 @@ namespace cl
             return;
 
         // Update window size if changed
-        s_renderer->window->GetWindowSize(s_renderer->width, s_renderer->height);
-        bgfx::setViewRect(0, 0, 0, uint16_t(s_renderer->width), uint16_t(s_renderer->height));
+        s_renderer->currentViewId = -1;
+        s_renderer->window->GetWindowSize(s_renderer->width, s_renderer->height); // Todo: Maybe I can add this to Update() or something so it doesnt need to be manually called. Also, maybe just rename Update() to BeginFrame()
 
-        // Touch view to ensure it's submitted
-        bgfx::touch(0);
+        // This is now handled in cameras
+        //bgfx::setViewRect(0, 0, 0, uint16_t(s_renderer->width), uint16_t(s_renderer->height));
+
+        //// Touch view to ensure it's submitted
+        //bgfx::touch(0);
     }
 
     void EndFrame()
@@ -126,7 +120,7 @@ namespace cl
 
     void Clear(const Color& color, float depth)
     {
-        if (!s_renderer)
+        if (!s_renderer || s_renderer->currentViewId == -1)
             return;
 
         uint32_t rgba = 0;
@@ -135,22 +129,28 @@ namespace cl
         rgba |= uint32_t(color.b) << 8;
         rgba |= uint32_t(color.a);
 
-        bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, rgba, depth, 0);
+        bgfx::setViewClear(s_renderer->currentViewId, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, rgba, depth, 0);
     }
 
     void SetViewport(int x, int y, int width, int height)
     {
-        bgfx::setViewRect(0, uint16_t(x), uint16_t(y), uint16_t(width), uint16_t(height));
+        if (!s_renderer || s_renderer->currentViewId == -1)
+            return;
+
+        bgfx::setViewRect(s_renderer->currentViewId, uint16_t(x), uint16_t(y), uint16_t(width), uint16_t(height));
     }
 
     void SetViewTransform(const Matrix4& view, const Matrix4& projection)
     {
-        bgfx::setViewTransform(0, view.m, projection.m);
+        if (!s_renderer || s_renderer->currentViewId == -1)
+            return;
+
+        bgfx::setViewTransform(s_renderer->currentViewId, view.m, projection.m);
     }
 
     void DrawMesh(Mesh* mesh, const Matrix4& transform)
     {
-        if (!mesh || !mesh->IsValid() || !mesh->GetMaterial() || !mesh->GetMaterial()->GetShader())
+        if (s_renderer->currentViewId == -1 || !mesh || !mesh->IsValid() || !mesh->GetMaterial() || !mesh->GetMaterial()->GetShader())
             return;
 
         bgfx::setTransform(transform.m);
@@ -162,7 +162,7 @@ namespace cl
             | BGFX_STATE_WRITE_A
             | BGFX_STATE_WRITE_Z
             | BGFX_STATE_DEPTH_TEST_LESS
-            | BGFX_STATE_CULL_CCW
+            | BGFX_STATE_CULL_CW
             | BGFX_STATE_MSAA;
 
         // In BGFX, uniforms must be set each frame
@@ -180,7 +180,7 @@ namespace cl
         // Todo: add this
 
         bgfx::setState(state);
-        bgfx::submit(0, mesh->GetMaterial()->GetShader()->GetHandle());
+        bgfx::submit(s_renderer->currentViewId, mesh->GetMaterial()->GetShader()->GetHandle());
     }
 
     void DrawMesh(Mesh* mesh, const Vector3& position, const Vector3& rotation, const Vector3& scale)

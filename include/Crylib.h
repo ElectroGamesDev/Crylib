@@ -11,6 +11,8 @@
 #include "loaders/ModelLoader.h"
 #include "Shader.h"
 #include "Audio.h"
+#include "Camera.h"
+#include "Camera2D.h"
 
 namespace cl
 {
