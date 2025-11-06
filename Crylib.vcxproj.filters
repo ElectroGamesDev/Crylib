@@ -16,9 +16,6 @@
     <Filter Include="Source Files\third_party">
       <UniqueIdentifier>{442fcacc-b3b3-46b4-aed9-e4e4a68ea4fb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\third_party\basic universal">
-      <UniqueIdentifier>{54400504-dd8d-41fc-b8fa-013d59957937}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\third_party\zstd">
       <UniqueIdentifier>{a6f0a8ba-bd3a-451d-a097-15d13398c9cf}</UniqueIdentifier>
     </Filter>
@@ -33,6 +30,9 @@
     </Filter>
     <Filter Include="Source Files\examples">
       <UniqueIdentifier>{cffaad7e-d93b-429a-9ab6-0d84409862a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\third_party\basics universal">
+      <UniqueIdentifier>{54400504-dd8d-41fc-b8fa-013d59957937}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -69,33 +69,6 @@
     <ClInclude Include="include\Model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="third_party\basic universal\basisu_transcoder.h">
-      <Filter>Source Files\third_party\basic universal</Filter>
-    </ClInclude>
-    <ClInclude Include="third_party\basic universal\basisu_transcoder_internal.h">
-      <Filter>Source Files\third_party\basic universal</Filter>
-    </ClInclude>
-    <ClInclude Include="third_party\basic universal\basisu_transcoder_uastc.h">
-      <Filter>Source Files\third_party\basic universal</Filter>
-    </ClInclude>
-    <ClInclude Include="third_party\basic universal\basisu.h">
-      <Filter>Source Files\third_party\basic universal</Filter>
-    </ClInclude>
-    <ClInclude Include="third_party\basic universal\basisu_astc_hdr_core.h">
-      <Filter>Source Files\third_party\basic universal</Filter>
-    </ClInclude>
-    <ClInclude Include="third_party\basic universal\basisu_astc_helpers.h">
-      <Filter>Source Files\third_party\basic universal</Filter>
-    </ClInclude>
-    <ClInclude Include="third_party\basic universal\basisu_containers.h">
-      <Filter>Source Files\third_party\basic universal</Filter>
-    </ClInclude>
-    <ClInclude Include="third_party\basic universal\basisu_containers_impl.h">
-      <Filter>Source Files\third_party\basic universal</Filter>
-    </ClInclude>
-    <ClInclude Include="third_party\basic universal\basisu_file_headers.h">
-      <Filter>Source Files\third_party\basic universal</Filter>
-    </ClInclude>
     <ClInclude Include="third_party\zstd\zstd.h">
       <Filter>Source Files\third_party\zstd</Filter>
     </ClInclude>
@@ -116,6 +89,33 @@
     </ClInclude>
     <ClInclude Include="third_party\ufbx\ufbx.h">
       <Filter>Source Files\third_party\ufbx</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\basis universal\basisu_transcoder.h">
+      <Filter>Source Files\third_party\basics universal</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\basis universal\basisu_transcoder_internal.h">
+      <Filter>Source Files\third_party\basics universal</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\basis universal\basisu_transcoder_uastc.h">
+      <Filter>Source Files\third_party\basics universal</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\basis universal\basisu.h">
+      <Filter>Source Files\third_party\basics universal</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\basis universal\basisu_astc_hdr_core.h">
+      <Filter>Source Files\third_party\basics universal</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\basis universal\basisu_astc_helpers.h">
+      <Filter>Source Files\third_party\basics universal</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\basis universal\basisu_containers.h">
+      <Filter>Source Files\third_party\basics universal</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\basis universal\basisu_containers_impl.h">
+      <Filter>Source Files\third_party\basics universal</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\basis universal\basisu_file_headers.h">
+      <Filter>Source Files\third_party\basics universal</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -149,9 +149,6 @@
     <ClCompile Include="src\Model.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="third_party\basic universal\basisu_transcoder.cpp">
-      <Filter>Source Files\third_party\basic universal</Filter>
-    </ClCompile>
     <ClCompile Include="third_party\zstd\zstddeclib.c">
       <Filter>Source Files\third_party\zstd</Filter>
     </ClCompile>
@@ -176,37 +173,40 @@
     <ClCompile Include="examples\Test.cpp">
       <Filter>Source Files\examples</Filter>
     </ClCompile>
+    <ClCompile Include="third_party\basis universal\basisu_transcoder.cpp">
+      <Filter>Source Files\third_party\basics universal</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="third_party\basic universal\basisu_transcoder_tables_astc.inc">
-      <Filter>Source Files\third_party\basic universal</Filter>
+    <None Include="third_party\basis universal\basisu_transcoder_tables_astc.inc">
+      <Filter>Source Files\third_party\basics universal</Filter>
     </None>
-    <None Include="third_party\basic universal\basisu_transcoder_tables_astc_0_255.inc">
-      <Filter>Source Files\third_party\basic universal</Filter>
+    <None Include="third_party\basis universal\basisu_transcoder_tables_astc_0_255.inc">
+      <Filter>Source Files\third_party\basics universal</Filter>
     </None>
-    <None Include="third_party\basic universal\basisu_transcoder_tables_atc_55.inc">
-      <Filter>Source Files\third_party\basic universal</Filter>
+    <None Include="third_party\basis universal\basisu_transcoder_tables_atc_55.inc">
+      <Filter>Source Files\third_party\basics universal</Filter>
     </None>
-    <None Include="third_party\basic universal\basisu_transcoder_tables_atc_56.inc">
-      <Filter>Source Files\third_party\basic universal</Filter>
+    <None Include="third_party\basis universal\basisu_transcoder_tables_atc_56.inc">
+      <Filter>Source Files\third_party\basics universal</Filter>
     </None>
-    <None Include="third_party\basic universal\basisu_transcoder_tables_bc7_m5_alpha.inc">
-      <Filter>Source Files\third_party\basic universal</Filter>
+    <None Include="third_party\basis universal\basisu_transcoder_tables_bc7_m5_alpha.inc">
+      <Filter>Source Files\third_party\basics universal</Filter>
     </None>
-    <None Include="third_party\basic universal\basisu_transcoder_tables_bc7_m5_color.inc">
-      <Filter>Source Files\third_party\basic universal</Filter>
+    <None Include="third_party\basis universal\basisu_transcoder_tables_bc7_m5_color.inc">
+      <Filter>Source Files\third_party\basics universal</Filter>
     </None>
-    <None Include="third_party\basic universal\basisu_transcoder_tables_dxt1_5.inc">
-      <Filter>Source Files\third_party\basic universal</Filter>
+    <None Include="third_party\basis universal\basisu_transcoder_tables_dxt1_5.inc">
+      <Filter>Source Files\third_party\basics universal</Filter>
     </None>
-    <None Include="third_party\basic universal\basisu_transcoder_tables_dxt1_6.inc">
-      <Filter>Source Files\third_party\basic universal</Filter>
+    <None Include="third_party\basis universal\basisu_transcoder_tables_dxt1_6.inc">
+      <Filter>Source Files\third_party\basics universal</Filter>
     </None>
-    <None Include="third_party\basic universal\basisu_transcoder_tables_pvrtc2_45.inc">
-      <Filter>Source Files\third_party\basic universal</Filter>
+    <None Include="third_party\basis universal\basisu_transcoder_tables_pvrtc2_45.inc">
+      <Filter>Source Files\third_party\basics universal</Filter>
     </None>
-    <None Include="third_party\basic universal\basisu_transcoder_tables_pvrtc2_alpha_33.inc">
-      <Filter>Source Files\third_party\basic universal</Filter>
+    <None Include="third_party\basis universal\basisu_transcoder_tables_pvrtc2_alpha_33.inc">
+      <Filter>Source Files\third_party\basics universal</Filter>
     </None>
   </ItemGroup>
 </Project>

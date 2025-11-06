@@ -167,15 +167,15 @@
     <ClInclude Include="include\Shader.h" />
     <ClInclude Include="include\Texture.h" />
     <ClInclude Include="include\Window.h" />
-    <ClInclude Include="third_party\basic universal\basisu.h" />
-    <ClInclude Include="third_party\basic universal\basisu_astc_hdr_core.h" />
-    <ClInclude Include="third_party\basic universal\basisu_astc_helpers.h" />
-    <ClInclude Include="third_party\basic universal\basisu_containers.h" />
-    <ClInclude Include="third_party\basic universal\basisu_containers_impl.h" />
-    <ClInclude Include="third_party\basic universal\basisu_file_headers.h" />
-    <ClInclude Include="third_party\basic universal\basisu_transcoder.h" />
-    <ClInclude Include="third_party\basic universal\basisu_transcoder_internal.h" />
-    <ClInclude Include="third_party\basic universal\basisu_transcoder_uastc.h" />
+    <ClInclude Include="third_party\basis universal\basisu.h" />
+    <ClInclude Include="third_party\basis universal\basisu_astc_hdr_core.h" />
+    <ClInclude Include="third_party\basis universal\basisu_astc_helpers.h" />
+    <ClInclude Include="third_party\basis universal\basisu_containers.h" />
+    <ClInclude Include="third_party\basis universal\basisu_containers_impl.h" />
+    <ClInclude Include="third_party\basis universal\basisu_file_headers.h" />
+    <ClInclude Include="third_party\basis universal\basisu_transcoder.h" />
+    <ClInclude Include="third_party\basis universal\basisu_transcoder_internal.h" />
+    <ClInclude Include="third_party\basis universal\basisu_transcoder_uastc.h" />
     <ClInclude Include="third_party\ufbx\ufbx.h" />
     <ClInclude Include="third_party\zstd\zstd.h" />
   </ItemGroup>
@@ -196,21 +196,21 @@
     <ClCompile Include="src\Texture.cpp" />
     <ClCompile Include="src\Renderer.cpp" />
     <ClCompile Include="src\Window.cpp" />
-    <ClCompile Include="third_party\basic universal\basisu_transcoder.cpp" />
+    <ClCompile Include="third_party\basis universal\basisu_transcoder.cpp" />
     <ClCompile Include="third_party\ufbx\ufbx.c" />
     <ClCompile Include="third_party\zstd\zstddeclib.c" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="third_party\basic universal\basisu_transcoder_tables_astc.inc" />
-    <None Include="third_party\basic universal\basisu_transcoder_tables_astc_0_255.inc" />
-    <None Include="third_party\basic universal\basisu_transcoder_tables_atc_55.inc" />
-    <None Include="third_party\basic universal\basisu_transcoder_tables_atc_56.inc" />
-    <None Include="third_party\basic universal\basisu_transcoder_tables_bc7_m5_alpha.inc" />
-    <None Include="third_party\basic universal\basisu_transcoder_tables_bc7_m5_color.inc" />
-    <None Include="third_party\basic universal\basisu_transcoder_tables_dxt1_5.inc" />
-    <None Include="third_party\basic universal\basisu_transcoder_tables_dxt1_6.inc" />
-    <None Include="third_party\basic universal\basisu_transcoder_tables_pvrtc2_45.inc" />
-    <None Include="third_party\basic universal\basisu_transcoder_tables_pvrtc2_alpha_33.inc" />
+    <None Include="third_party\basis universal\basisu_transcoder_tables_astc.inc" />
+    <None Include="third_party\basis universal\basisu_transcoder_tables_astc_0_255.inc" />
+    <None Include="third_party\basis universal\basisu_transcoder_tables_atc_55.inc" />
+    <None Include="third_party\basis universal\basisu_transcoder_tables_atc_56.inc" />
+    <None Include="third_party\basis universal\basisu_transcoder_tables_bc7_m5_alpha.inc" />
+    <None Include="third_party\basis universal\basisu_transcoder_tables_bc7_m5_color.inc" />
+    <None Include="third_party\basis universal\basisu_transcoder_tables_dxt1_5.inc" />
+    <None Include="third_party\basis universal\basisu_transcoder_tables_dxt1_6.inc" />
+    <None Include="third_party\basis universal\basisu_transcoder_tables_pvrtc2_45.inc" />
+    <None Include="third_party\basis universal\basisu_transcoder_tables_pvrtc2_alpha_33.inc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
