@@ -159,7 +159,7 @@ namespace cl
                         cgltf_primitive& primitive = node->mesh->primitives[j];
                         auto mesh = std::make_shared<Mesh>();
                         std::vector<Vertex> vertices;
-                        std::vector<uint16_t> indices;
+                        std::vector<uint32_t> indices;
 
                         bool hasSkin = (node->skin != nullptr);
                         mesh->SetSkinned(hasSkin);
@@ -232,9 +232,9 @@ namespace cl
                                 {
                                     if (accessor->component_type == cgltf_component_type_r_8u || accessor->component_type == cgltf_component_type_r_16u)
                                     {
-                                        uint16_t joints[4] = { 0, 0, 0, 0 };
+                                        uint32_t joints[4] = { 0, 0, 0, 0 };
                                         for (int c = 0; c < 4; ++c)
-                                            joints[c] = static_cast<uint16_t>(cgltf_accessor_read_index(accessor, v * 4 + c));
+                                            joints[c] = static_cast<uint32_t>(cgltf_accessor_read_index(accessor, v * 4 + c));
 
                                         for (int c = 0; c < 4; ++c)
                                             vertices[v].boneIndices[c] = static_cast<float>(joints[c]);
@@ -265,7 +265,7 @@ namespace cl
                             cgltf_accessor* accessor = primitive.indices;
                             indices.resize(accessor->count);
                             for (size_t idx = 0; idx < accessor->count; ++idx)
-                                indices[idx] = static_cast<uint16_t>(cgltf_accessor_read_index(accessor, idx));
+                                indices[idx] = static_cast<uint32_t>(cgltf_accessor_read_index(accessor, idx));
                         }
 
                         if (primitive.material)

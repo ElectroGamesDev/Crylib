@@ -299,7 +299,7 @@ namespace cl
                         mesh->SetSkinned(hasSkin);
 
                         std::vector<Vertex> vertices;
-                        std::vector<uint16_t> indices;
+                        std::vector<uint32_t> indices;
                         std::vector<uint32_t> tri_buf(primitive->max_face_triangles * 3);
 
                         uint32_t ix = 0;
@@ -370,7 +370,7 @@ namespace cl
                                     }
 
                                     vertices.push_back(v);
-                                    indices.push_back(static_cast<uint16_t>(ix++));
+                                    indices.push_back(static_cast<uint32_t>(ix++));
                                 }
                             }
                         }

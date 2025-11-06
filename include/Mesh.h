@@ -35,7 +35,7 @@ namespace cl
         Mesh(const Mesh& other);
 
         void SetVertices(const std::vector<Vertex>& vertices);
-        void SetIndices(const std::vector<uint16_t>& indices);
+        void SetIndices(const std::vector<uint32_t>& indices);
         void Upload();
         void Destroy();
 
@@ -51,7 +51,7 @@ namespace cl
 
     private:
         std::vector<Vertex> m_vertices;
-        std::vector<uint16_t> m_indices;
+        std::vector<uint32_t> m_indices;
         bgfx::VertexBufferHandle m_vbh;
         bgfx::IndexBufferHandle m_ibh;
         bool m_uploaded;

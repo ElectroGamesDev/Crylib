@@ -38,7 +38,7 @@ namespace cl
         m_uploaded = false;
     }
 
-    void Mesh::SetIndices(const std::vector<uint16_t>& indices)
+    void Mesh::SetIndices(const std::vector<uint32_t>& indices)
     {
         m_indices = indices;
         m_uploaded = false;
@@ -69,8 +69,8 @@ namespace cl
         m_vbh = bgfx::createVertexBuffer(vbMem, layout);
 
         const bgfx::Memory* ibMem = bgfx::copy(m_indices.data(),
-            static_cast<uint32_t>(m_indices.size() * sizeof(uint16_t)));
-        m_ibh = bgfx::createIndexBuffer(ibMem);
+            static_cast<uint32_t>(m_indices.size() * sizeof(uint32_t)));
+        m_ibh = bgfx::createIndexBuffer(ibMem, BGFX_BUFFER_INDEX32);
 
         m_uploaded = true;
     }
