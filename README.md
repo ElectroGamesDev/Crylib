@@ -91,4 +91,4 @@ The [`/examples`](./examples) directory contains practical examples demonstratin
 
 Crylib is licensed under the [MIT License](./LICENSE).
 
-Crylib uses several third-party libraries. See the [THIRD_PARTY_NOTICES](./THIRD_PARTY_NOTICES) file for license information.
+Crylib uses several third-party libraries. See the [THIRD_PARTY_LICENSES](./THIRD_PARTY_LICENSES) file for license information.
