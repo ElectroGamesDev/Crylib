@@ -16,7 +16,7 @@ Crylib provides a unified API for rendering, animation, audio, and asset managem
 - **PBR materials** (Physically Based Rendering)
 - **Lighting system** with multiple light types
 - **3D and 2D audio** with full **spatial sound** support
-- **FBX and glTF model loading**
+- **FBX, glTF, and OBJ model loading**
 - **Supports a wide range of image formats**
 - **Simple and efficient**
 
@@ -54,7 +54,7 @@ Crylib provides a unified API for rendering, animation, audio, and asset managem
 ## Supported Asset Formats
 
 ### 3D Model Formats
-- FBX and glTF / GLB
+- FBX, glTF / GLB, and OBJ
 
 ### Image Formats
 - PNG, JPG / JPEG, BMP, TGA, PSD, GIF, HDR, PIC, and PNM
