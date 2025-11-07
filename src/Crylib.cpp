@@ -135,7 +135,7 @@ namespace cl
 
                     if (sleepDur.count() > 0)
                     {
-#ifdef __EMSCRIPTEN__ // Todo: I'm not sure if this this define is correct
+#ifdef PLATFORM_WEB
                         emscripten_sleep(static_cast<unsigned int>(sleepDur.count() / 1000));
 #else
                         std::this_thread::sleep_for(sleepDur);
@@ -458,6 +458,8 @@ namespace cl
         return "IOS";
 #elif defined(PLATFORM_ANDROID)
         return "Android";
+#elif defined(PLATFORM_WEB)
+        return "Web";
 #else
         return "Unknown";
 #endif
