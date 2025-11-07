@@ -99,15 +99,14 @@ namespace cl
         if (!s_renderer)
             return;
 
-        // Update window size if changed
+        s_renderer->frameStartTime = std::chrono::steady_clock::now();
+        s_renderer->drawStats = DrawStats();
+
+        if (s_renderer->profilerEnabled)
+            s_renderer->profileMarkers.clear();
+
         s_renderer->currentViewId = 0;
-        s_renderer->window->GetWindowSize(s_renderer->width, s_renderer->height); // Todo: Maybe I can add this to Update() or something so it doesnt need to be manually called. Also, maybe just rename Update() to BeginFrame()
-
-        // This is now handled in cameras
-        //bgfx::setViewRect(0, 0, 0, uint16_t(s_renderer->width), uint16_t(s_renderer->height));
-
-        //// Touch view to ensure it's submitted
-        //bgfx::touch(0);
+        s_renderer->window->GetWindowSize(s_renderer->width, s_renderer->height);
     }
 
     void EndFrame()
@@ -116,7 +115,35 @@ namespace cl
             return;
 
         bgfx::frame();
+
+        // CPU time
+        s_renderer->frameEndTime = std::chrono::steady_clock::now();
+        std::chrono::duration<float, std::milli> cpuTime = s_renderer->frameEndTime - s_renderer->frameStartTime;
+        s_renderer->drawStats.cpuTime = cpuTime.count();
+
+        // Fetch BGFX stats
+        const bgfx::Stats* stats = bgfx::getStats();
+        if (!stats)
+            return;
+
+        // GPU time
+        if (stats->gpuTimeEnd > stats->gpuTimeBegin && stats->gpuTimerFreq > 0)
+            s_renderer->drawStats.gpuTime = float(stats->gpuTimeEnd - stats->gpuTimeBegin) / stats->gpuTimerFreq * 1000.0f;
+        else
+            s_renderer->drawStats.gpuTime = 0.0f;
+
+        // Draw call counts
+        s_renderer->drawStats.drawCalls = stats->numDraw;
+
+        // Texture and shader counts
+        s_renderer->drawStats.textureBinds = stats->numTextures;
+        s_renderer->drawStats.shaderSwitches = stats->numShaders;
+
+        // Memory usage
+        s_renderer->drawStats.textureMemoryUsed = stats->textureMemoryUsed;
+        s_renderer->drawStats.gpuMemoryUsed = stats->gpuMemoryUsed;
     }
+
 
     void Clear(const Color& color, float depth)
     {
@@ -152,6 +179,48 @@ namespace cl
         bgfx::setViewTransform(s_renderer->currentViewId, view.m, projection.m);
     }
 
+    uint64_t GetBlendState(BlendMode mode)
+    {
+        switch (mode)
+        {
+        case BlendMode::None:
+            return 0;
+
+        case BlendMode::Alpha:
+            return BGFX_STATE_BLEND_ALPHA;
+
+        case BlendMode::Additive:
+            return BGFX_STATE_BLEND_ADD;
+
+        case BlendMode::Multiplied:
+            return BGFX_STATE_BLEND_MULTIPLY;
+
+        case BlendMode::Subtract:
+            return BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_ONE) | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_REVSUB);
+
+        case BlendMode::Screen:
+            return BGFX_STATE_BLEND_SCREEN;
+
+        case BlendMode::Darken:
+            return BGFX_STATE_BLEND_DARKEN;
+
+        case BlendMode::Lighten:
+            return BGFX_STATE_BLEND_LIGHTEN;
+
+        case BlendMode::LinearBurn:
+            return BGFX_STATE_BLEND_LINEAR_BURN;
+
+        case BlendMode::LinearDodge:
+            return BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE) | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD);
+
+        case BlendMode::PremultipliedAlpha:
+            return BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA);
+
+        default:
+            return 0;
+        }
+    }
+
     void DrawMesh(Mesh* mesh, const Matrix4& transform)
     {
         if (s_renderer->currentViewId == 0 || !mesh || !mesh->IsValid() || !mesh->GetMaterial() || !mesh->GetMaterial()->GetShader())
@@ -167,24 +236,34 @@ namespace cl
             | BGFX_STATE_WRITE_Z
             | BGFX_STATE_DEPTH_TEST_LESS
             | BGFX_STATE_CULL_CW
-            | BGFX_STATE_MSAA;
+            | BGFX_STATE_MSAA
+            | GetBlendState(s_renderer->currentBlendMode);
+
+        Material* material = mesh->GetMaterial();
+        Shader* shader = material->GetShader();
 
         // In BGFX, uniforms must be set each frame
 
         // Apply global uniforms
-        mesh->GetMaterial()->GetShader()->ApplyUniforms();
+        shader->ApplyUniforms();
 
         // Apply material specific uniforms
-        mesh->GetMaterial()->ApplyShaderUniforms();
+        material->ApplyShaderUniforms();
 
         // Apply PBR material map uniforms
-        mesh->GetMaterial()->ApplyPBRUniforms();
+        material->ApplyPBRUniforms();
 
         // Set bone transforms
         // Todo: add this
 
         bgfx::setState(state);
-        bgfx::submit(s_renderer->currentViewId, mesh->GetMaterial()->GetShader()->GetHandle());
+        bgfx::submit(s_renderer->currentViewId, shader->GetHandle());
+
+        // Update stats
+        //s_renderer->drawStats.drawCalls++;
+        s_renderer->drawStats.triangles += mesh->GetTriangleCount();
+        s_renderer->drawStats.vertices += mesh->GetVertices().size();
+        s_renderer->drawStats.indicies += mesh->GetIndices().size();
     }
 
     void DrawMesh(Mesh* mesh, const Vector3& position, const Vector3& rotation, const Vector3& scale)
@@ -277,5 +356,184 @@ namespace cl
     bgfx::ProgramHandle CreateDefaultShader()
     {
         return BGFX_INVALID_HANDLE;
+    }
+
+    // Blend Mode
+
+    void SetBlendMode(BlendMode mode)
+    {
+        if (s_renderer)
+            s_renderer->currentBlendMode = mode;
+    }
+
+    BlendMode GetBlendMode()
+    {
+        return s_renderer ? s_renderer->currentBlendMode : BlendMode::None;
+    }
+
+    // Performance Stats
+
+    void ResetDrawStats()
+    {
+        if (s_renderer)
+            s_renderer->drawStats = DrawStats();
+    }
+
+    int GetDrawCallCount()
+    {
+        return s_renderer ? s_renderer->drawStats.drawCalls : 0;
+    }
+
+    int GetTriangleCount()
+    {
+        return s_renderer ? s_renderer->drawStats.triangles : 0;
+    }
+
+    int GetVertexCount()
+    {
+        return s_renderer ? s_renderer->drawStats.vertices : 0;
+    }
+
+    int GetIndexCount()
+    {
+        return s_renderer ? s_renderer->drawStats.indicies : 0;
+    }
+
+    int GetTextureBindCount()
+    {
+        return s_renderer ? s_renderer->drawStats.textureBinds : 0;
+    }
+
+    int GetShaderSwitchCount()
+    {
+        return s_renderer ? s_renderer->drawStats.shaderSwitches : 0;
+    }
+
+    float GetCPUFrameTime()
+    {
+        return s_renderer ? s_renderer->drawStats.cpuTime : 0.0f;
+    }
+
+    float GetGPUFrameTime()
+    {
+        return s_renderer ? s_renderer->drawStats.gpuTime : 0.0f;
+    }
+
+    const DrawStats& GetDrawStats()
+    {
+        static DrawStats emptyStats;
+        return s_renderer ? s_renderer->drawStats : emptyStats;
+    }
+
+    // Renderer Info
+
+    std::string GetRendererName()
+    {
+        if (!s_renderer)
+            return "Unknown";
+
+        return bgfx::getRendererName(bgfx::getRendererType());
+    }
+
+    std::string GetGPUVendor()
+    {
+        if (!s_renderer)
+            return "Unknown";
+
+        const bgfx::Caps* caps = bgfx::getCaps();
+
+        switch (caps->vendorId)
+        {
+            case BGFX_PCI_ID_NONE:
+                return "Unknown";
+            case BGFX_PCI_ID_SOFTWARE_RASTERIZER:
+                return "Software Rasterizer";
+            case BGFX_PCI_ID_AMD:
+                return "AMD";
+            case BGFX_PCI_ID_APPLE:
+                return "Apple";
+            case BGFX_PCI_ID_INTEL:
+                return "Intel";
+            case BGFX_PCI_ID_NVIDIA:
+                return "NVIDIA";
+            case BGFX_PCI_ID_MICROSOFT:
+                return "Microsoft";
+            case BGFX_PCI_ID_ARM:
+                return "ARM";
+            default:
+                return "Unknown";
+        }
+    }
+
+    int GetMaxTextureSize()
+    {
+        if (!s_renderer)
+            return 0;
+
+        return bgfx::getCaps()->limits.maxTextureSize;
+    }
+
+    int GetGPUMemoryUsage()
+    {
+        if (!s_renderer)
+            return 0;
+
+        return s_renderer->drawStats.gpuMemoryUsed;
+    }
+
+    int GetTextureMemoryUsage()
+    {
+        if (!s_renderer)
+            return 0;
+
+        return s_renderer->drawStats.textureMemoryUsed;
+    }
+
+    // Profiling and Markers
+
+    void BeginProfileMarker(std::string_view name)
+    {
+        if (!s_renderer || !s_renderer->profilerEnabled)
+            return;
+
+        s_renderer->currentMarkerName = name;
+        s_renderer->currentMarkerStart = std::chrono::high_resolution_clock::now();
+    }
+
+    void EndProfileMarker()
+    {
+        if (!s_renderer || !s_renderer->profilerEnabled || !s_renderer->currentMarkerName.empty())
+            return;
+
+        auto endTime = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<float, std::milli> duration = endTime - s_renderer->currentMarkerStart;
+
+        ProfileMarker marker;
+        marker.name = s_renderer->currentMarkerName;
+        marker.cpuTime = duration.count();
+        marker.gpuTime = 0.0f;
+
+        s_renderer->profileMarkers.push_back(marker);
+        s_renderer->currentMarkerName = nullptr;
+    }
+
+    void SetProfilerEnabled(bool enabled)
+    {
+        if (s_renderer)
+            s_renderer->profilerEnabled = enabled;
+    }
+
+    const std::vector<ProfileMarker>& GetProfileMarkers()
+    {
+        static std::vector<ProfileMarker> empty;
+        return s_renderer ? s_renderer->profileMarkers : empty;
+    }
+
+    void SetDebugMarker(std::string_view marker)
+    {
+        if (!s_renderer)
+            return;
+
+        bgfx::setMarker(marker.data());
     }
 }
