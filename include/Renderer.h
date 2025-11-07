@@ -83,7 +83,7 @@ namespace cl
     void SetViewport(int x, int y, int width, int height);
     void SetViewTransform(const Matrix4& view, const Matrix4& projection);
 
-    void DrawMesh(Mesh* mesh, const Matrix4& transform);
+    void DrawMesh(Mesh* mesh, const Matrix4& transform, const std::vector<Matrix4>* bones);
     void DrawMesh(Mesh* mesh, const Vector3& position, const Vector3& rotation, const Vector3& scale);
     void DrawModel(Model* model);
     void DrawModel(Model* model, const Vector3& position, const Vector3& rotation, const Vector3& scale);
