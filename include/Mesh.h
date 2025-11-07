@@ -36,6 +36,9 @@ namespace cl
 
         void SetVertices(const std::vector<Vertex>& vertices);
         void SetIndices(const std::vector<uint32_t>& indices);
+        const std::vector<Vertex>& GetVertices();
+        const std::vector<uint32_t>& GetIndices();
+        int GetTriangleCount();
         void Upload();
         void Destroy();
 

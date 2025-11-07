@@ -44,6 +44,24 @@ namespace cl
         m_uploaded = false;
     }
 
+    const std::vector<Vertex>& Mesh::GetVertices()
+    {
+        return m_vertices;
+    }
+
+    const std::vector<uint32_t>& Mesh::GetIndices()
+    {
+        return m_indices;
+    }
+
+    int Mesh::GetTriangleCount()
+    {
+        if (!m_indices.empty())
+            return m_indices.size() / 3;
+        else
+            return m_vertices.size() / 3;
+    }
+
     void Mesh::Upload()
     {
         if (m_uploaded)
