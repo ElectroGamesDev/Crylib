@@ -274,6 +274,7 @@ namespace cl
             }
 
             model->SetSkeleton(skeleton);
+            model->SetSkinned(true);
         }
         std::function<void(ufbx_node*, const Matrix4&)> ProcessNode;
         ProcessNode = [&](ufbx_node* node, const Matrix4& parentTransform)

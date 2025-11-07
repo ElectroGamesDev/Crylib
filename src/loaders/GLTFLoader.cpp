@@ -122,6 +122,7 @@ namespace cl
             }
 
             model->SetSkeleton(skeleton);
+            model->SetSkinned(true);
         }
 
         std::function<void(cgltf_node*, const Matrix4&)> ProcessNode;
