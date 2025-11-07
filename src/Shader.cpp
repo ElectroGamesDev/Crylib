@@ -21,7 +21,7 @@ namespace cl
         mutable uint8_t nextSamplerStage = 0;
     };
 
-    Shader* LoadDefaultShader(const std::string& vertexPath, const std::string& fragmentPath)
+    Shader* LoadDefaultShader(std::string_view vertexPath, std::string_view fragmentPath)
     {
         if (s_defaultShader)
             delete s_defaultShader;
@@ -36,10 +36,10 @@ namespace cl
         return s_defaultShader;
     }
 
-    std::vector<uint8_t> ReadFileBytes(const std::string& path)
+    std::vector<uint8_t> ReadFileBytes(std::string_view path)
     {
         std::vector<uint8_t> data;
-        std::ifstream in(path, std::ios::binary | std::ios::ate);
+        std::ifstream in(path.data(), std::ios::binary | std::ios::ate);
         if (!in)
             return data;
 
@@ -114,9 +114,9 @@ namespace cl
         return *this;
     }
 
-    void* Shader::LoadShaderFile(const std::string& path) const
+    void* Shader::LoadShaderFile(std::string_view path) const
     {
-        auto bytes = ReadFileBytes(path);
+        auto bytes = ReadFileBytes(path.data());
         if (bytes.empty())
         {
             std::cerr << "[ERROR] Shader - failed to load \"" << path << "\". The file is either empty or not found." << std::endl;
@@ -136,7 +136,7 @@ namespace cl
         return handle;
     }
 
-    bool Shader::Load(const std::string& vertexPath, const std::string& fragmentPath)
+    bool Shader::Load(std::string_view vertexPath, std::string_view fragmentPath)
     {
         if (!m_impl)
             return false;
@@ -229,87 +229,86 @@ namespace cl
 
     // Uniform functions
 
-    bool Shader::HasUniform(const std::string& name) const
+    bool Shader::HasUniform(std::string_view name) const
     {
         if (!m_impl)
             return false;
 
         // Todo: Should this check from m_Uniforms instead?
-        return m_impl->uniforms.find(name) != m_impl->uniforms.end() ||
-            m_impl->samplerUniforms.find(name) != m_impl->samplerUniforms.end();
+        return m_impl->uniforms.find(name.data()) != m_impl->uniforms.end() || m_impl->samplerUniforms.find(name.data()) != m_impl->samplerUniforms.end();
     }
 
-    void Shader::SetUniform(const std::string& name, float v)
+    void Shader::SetUniform(std::string_view name, float v)
     {
-        m_Uniforms.push_back({ name, UniformType::Vec4, v });
+        m_Uniforms.push_back({ name.data(), UniformType::Vec4, v });
     }
 
 
-    void Shader::SetUniform(const std::string& name, const int v)
+    void Shader::SetUniform(std::string_view name, const int v)
     {
-        m_Uniforms.push_back({ name, UniformType::Vec4, v });
+        m_Uniforms.push_back({ name.data(), UniformType::Vec4, v });
     }
 
-    void Shader::SetUniform(const std::string& name, const float(&v2)[2])
+    void Shader::SetUniform(std::string_view name, const float(&v2)[2])
     {
-        m_Uniforms.push_back({ name, UniformType::Vec4, std::array<float, 2>{ v2[0], v2[1] } });
+        m_Uniforms.push_back({ name.data(), UniformType::Vec4, std::array<float, 2>{ v2[0], v2[1] } });
     }
 
-    void Shader::SetUniform(const std::string& name, const float(&v3)[3])
+    void Shader::SetUniform(std::string_view name, const float(&v3)[3])
     {
-        m_Uniforms.push_back({ name, UniformType::Vec4, std::array<float, 3>{ v3[0], v3[1], v3[2] } });
+        m_Uniforms.push_back({ name.data(), UniformType::Vec4, std::array<float, 3>{ v3[0], v3[1], v3[2] } });
     }
 
-    void Shader::SetUniform(const std::string& name, const float(&v4)[4])
+    void Shader::SetUniform(std::string_view name, const float(&v4)[4])
     {
-        m_Uniforms.push_back({ name, UniformType::Vec4, std::array<float, 4>{ v4[0], v4[1], v4[2], v4[3] } });
+        m_Uniforms.push_back({ name.data(), UniformType::Vec4, std::array<float, 4>{ v4[0], v4[1], v4[2], v4[3] } });
     }
 
-    void Shader::SetUniform(const std::string& name, const float(&m4)[16])
+    void Shader::SetUniform(std::string_view name, const float(&m4)[16])
     {
         std::array<float, 16> arr;
         std::copy(std::begin(m4), std::end(m4), arr.begin());
-        m_Uniforms.push_back({ name, UniformType::Mat4, arr });
+        m_Uniforms.push_back({ name.data(), UniformType::Mat4, arr });
     }
 
-    void Shader::SetUniform(const std::string& name, Texture* texture)
+    void Shader::SetUniform(std::string_view name, Texture* texture)
     {
-        m_Uniforms.push_back({ name, UniformType::Sampler, texture });
+        m_Uniforms.push_back({ name.data(), UniformType::Sampler, texture });
     }
 
     // Internal uniform functions
 
-    void* Shader::GetOrCreateUniform(const std::string& name, UniformType type, uint16_t num) const
+    void* Shader::GetOrCreateUniform(std::string_view name, UniformType type, uint16_t num) const
     {
         if (!m_impl)
             return nullptr;
 
-        auto it = m_impl->uniforms.find(name);
+        auto it = m_impl->uniforms.find(name.data());
         if (it != m_impl->uniforms.end())
         {
             bgfx::UniformHandle* handle = new bgfx::UniformHandle(it->second);
             return handle;
         }
 
-        bgfx::UniformHandle h = bgfx::createUniform(name.c_str(), ToBgfxUniformType(type), num);
+        bgfx::UniformHandle h = bgfx::createUniform(name.data(), ToBgfxUniformType(type), num);
         if (!bgfx::isValid(h))
         {
             std::cerr << "Shader::getOrCreateUniform: failed to create uniform " << name << std::endl;
             return nullptr;
         }
-        m_impl->uniforms[name] = h;
+        m_impl->uniforms[name.data()] = h;
 
         bgfx::UniformHandle* handle = new bgfx::UniformHandle(h);
         return handle;
     }
 
-    void Shader::SetUniformInternal(const std::string& name, float v) const
+    void Shader::SetUniformInternal(std::string_view name, float v) const
     {
         if (!m_impl)
             return;
 
         float tmp[4] = { v, 0.0f, 0.0f, 0.0f };
-        void* hPtr = GetOrCreateUniform(name, UniformType::Vec4, 1);
+        void* hPtr = GetOrCreateUniform(name.data(), UniformType::Vec4, 1);
         if (hPtr)
         {
             bgfx::UniformHandle h = *static_cast<bgfx::UniformHandle*>(hPtr);
@@ -319,7 +318,7 @@ namespace cl
         }
     }
 
-    void Shader::SetUniformInternal(const std::string& name, int v) const
+    void Shader::SetUniformInternal(std::string_view name, int v) const
     {
         if (!m_impl)
             return;
@@ -327,7 +326,7 @@ namespace cl
         // Pack int as float in a Vec4 uniform
         // In shader, you can cast back: int myInt = int(u_intUniform.x);
         float tmp[4] = { static_cast<float>(v), 0.0f, 0.0f, 0.0f };
-        void* hPtr = GetOrCreateUniform(name, UniformType::Vec4, 1);
+        void* hPtr = GetOrCreateUniform(name.data(), UniformType::Vec4, 1);
         if (hPtr)
         {
             bgfx::UniformHandle h = *static_cast<bgfx::UniformHandle*>(hPtr);
@@ -337,12 +336,12 @@ namespace cl
         }
     }
 
-    void Shader::SetUniformInternal(const std::string& name, const float(&v2)[2]) const
+    void Shader::SetUniformInternal(std::string_view name, const float(&v2)[2]) const
     {
         if (!m_impl)
             return;
         float tmp[4] = { v2[0], v2[1], 0.0f, 0.0f };
-        void* hPtr = GetOrCreateUniform(name, UniformType::Vec4, 1);
+        void* hPtr = GetOrCreateUniform(name.data(), UniformType::Vec4, 1);
         if (hPtr)
         {
             bgfx::UniformHandle h = *static_cast<bgfx::UniformHandle*>(hPtr);
@@ -352,12 +351,12 @@ namespace cl
         }
     }
 
-    void Shader::SetUniformInternal(const std::string& name, const float(&v3)[3]) const
+    void Shader::SetUniformInternal(std::string_view name, const float(&v3)[3]) const
     {
         if (!m_impl)
             return;
         float tmp[4] = { v3[0], v3[1], v3[2], 0.0f };
-        void* hPtr = GetOrCreateUniform(name, UniformType::Vec4, 1);
+        void* hPtr = GetOrCreateUniform(name.data(), UniformType::Vec4, 1);
         if (hPtr)
         {
             bgfx::UniformHandle h = *static_cast<bgfx::UniformHandle*>(hPtr);
@@ -367,11 +366,11 @@ namespace cl
         }
     }
 
-    void Shader::SetUniformInternal(const std::string& name, const float(&v4)[4]) const
+    void Shader::SetUniformInternal(std::string_view name, const float(&v4)[4]) const
     {
         if (!m_impl)
             return;
-        void* hPtr = GetOrCreateUniform(name, UniformType::Vec4, 1);
+        void* hPtr = GetOrCreateUniform(name.data(), UniformType::Vec4, 1);
         if (hPtr)
         {
             bgfx::UniformHandle h = *static_cast<bgfx::UniformHandle*>(hPtr);
@@ -381,11 +380,11 @@ namespace cl
         }
     }
 
-    void Shader::SetUniformInternal(const std::string& name, const float(&m4)[16]) const
+    void Shader::SetUniformInternal(std::string_view name, const float(&m4)[16]) const
     {
         if (!m_impl)
             return;
-        void* hPtr = GetOrCreateUniform(name, UniformType::Mat4, 1);
+        void* hPtr = GetOrCreateUniform(name.data(), UniformType::Mat4, 1);
         if (hPtr)
         {
             bgfx::UniformHandle h = *static_cast<bgfx::UniformHandle*>(hPtr);
@@ -395,7 +394,7 @@ namespace cl
         }
     }
 
-    void Shader::SetUniformInternal(const std::string& name, const Texture* texture) const
+    void Shader::SetUniformInternal(std::string_view name, const Texture* texture) const
     {
         if (!m_impl || !texture)
             return;
@@ -403,17 +402,17 @@ namespace cl
         if (!bgfx::isValid(handle))
             return;
         // Get or create sampler uniform
-        auto itSampler = m_impl->samplerUniforms.find(name);
+        auto itSampler = m_impl->samplerUniforms.find(name.data());
         bgfx::UniformHandle sampler = BGFX_INVALID_HANDLE;
         if (itSampler == m_impl->samplerUniforms.end())
         {
-            sampler = bgfx::createUniform(name.c_str(), bgfx::UniformType::Sampler);
+            sampler = bgfx::createUniform(name.data(), bgfx::UniformType::Sampler);
             if (!bgfx::isValid(sampler))
             {
                 std::cerr << "Shader::SetUniform: failed to create sampler uniform " << name << std::endl;
                 return;
             }
-            m_impl->samplerUniforms[name] = sampler;
+            m_impl->samplerUniforms[name.data()] = sampler;
         }
         else
             sampler = itSampler->second;
@@ -444,9 +443,9 @@ namespace cl
         }
 
         // Cache the fixed stage if not already set
-        auto itStage = m_impl->samplerStages.find(name);
+        auto itStage = m_impl->samplerStages.find(name.data());
         if (itStage == m_impl->samplerStages.end())
-            m_impl->samplerStages[name] = stage;
+            m_impl->samplerStages[name.data()] = stage;
         else if (itStage->second != stage)
         {
             std::cerr << "[Error] Shader::SetUniform - Stage mismatch for " << name << std::endl;

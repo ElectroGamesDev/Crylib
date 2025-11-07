@@ -162,7 +162,7 @@ namespace cl {
         }
     }
 
-    const char* GetAudioDeviceName(int index, ma_device_type type) {
+    std::string GetAudioDeviceName(int index, ma_device_type type) {
         if (!audioSystem.initialized) return nullptr;
 
         if (type == ma_device_type_playback) {
@@ -185,14 +185,14 @@ namespace cl {
     }
 
     // Sound Loading/Unloading
-    Sound LoadSound(const char* fileName) {
+    Sound LoadSound(std::string_view fileName) {
         Sound sound = {};
 
-        if (!audioSystem.initialized || !fileName) return sound;
+        if (!audioSystem.initialized || !fileName.data()) return sound;
 
         ma_decoder_config decoderConfig = ma_decoder_config_init(ma_format_f32, 0, 0);
         ma_decoder decoder;
-        if (ma_decoder_init_file(fileName, &decoderConfig, &decoder) != MA_SUCCESS) return sound;
+        if (ma_decoder_init_file(fileName.data(), &decoderConfig, &decoder) != MA_SUCCESS) return sound;
 
         ma_uint64 frameCount;
         if (ma_decoder_get_length_in_pcm_frames(&decoder, &frameCount) != MA_SUCCESS) {
@@ -386,14 +386,14 @@ namespace cl {
     }
 
     // Music Loading/Unloading
-    Music LoadMusicStream(const char* fileName) {
+    Music LoadMusicStream(std::string_view fileName) {
         Music music = { 0 };
 
-        if (!audioSystem.initialized || !fileName) {
+        if (!audioSystem.initialized || !fileName.data()) {
             return music;
         }
 
-        ma_result result = ma_sound_init_from_file(&audioSystem.engine, fileName,
+        ma_result result = ma_sound_init_from_file(&audioSystem.engine, fileName.data(),
             MA_SOUND_FLAG_STREAM | MA_SOUND_FLAG_NO_SPATIALIZATION,
             nullptr, nullptr, &music.sound);
 
@@ -1054,8 +1054,8 @@ namespace cl {
         return audioSystem.recordingBuffer;
     }
 
-    void SaveRecordedAudio(const char* fileName) {
-        if (audioSystem.recordingBuffer.empty() || !fileName) return;
+    void SaveRecordedAudio(std::string_view fileName) {
+        if (audioSystem.recordingBuffer.empty() || !fileName.data()) return;
 
         ma_encoder_config config = ma_encoder_config_init(
             ma_encoding_format_wav,
@@ -1065,7 +1065,7 @@ namespace cl {
         );
 
         ma_encoder encoder;
-        ma_result result = ma_encoder_init_file(fileName, &config, &encoder);
+        ma_result result = ma_encoder_init_file(fileName.data(), &config, &encoder);
         if (result != MA_SUCCESS) return;
 
         ma_uint64 framesToWrite = audioSystem.recordingBuffer.size() / audioSystem.recordingDevice.capture.channels;
@@ -1155,14 +1155,14 @@ namespace cl {
     }
 
     // Utility Functions
-    const char* GetAudioFormatName(ma_format format) {
+    std::string GetAudioFormatName(ma_format format) {
         switch (format) {
-        case ma_format_u8: return "8-bit unsigned";
-        case ma_format_s16: return "16-bit signed";
-        case ma_format_s24: return "24-bit signed";
-        case ma_format_s32: return "32-bit signed";
-        case ma_format_f32: return "32-bit float";
-        default: return "Unknown";
+            case ma_format_u8: return "8-bit unsigned";
+            case ma_format_s16: return "16-bit signed";
+            case ma_format_s24: return "24-bit signed";
+            case ma_format_s32: return "32-bit signed";
+            case ma_format_f32: return "32-bit float";
+            default: return "Unknown";
         }
     }
 

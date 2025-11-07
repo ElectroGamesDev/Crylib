@@ -23,7 +23,7 @@ namespace cl
 
     // Window State and Properties
     bool ShouldClose();
-    void SetWindowTitle(const char* title);
+    void SetWindowTitle(std::string_view title);
     void GetWindowSize(int& width, int& height);
     bool IsWindowReady();
     bool IsWindowFullscreen();
@@ -37,13 +37,13 @@ namespace cl
     void MinimizeWindow();
     void RestoreWindow();
     void SetWindowOpacity(float opacity);
-    void SetWindowIcon(const char* iconPath);
+    void SetWindowIcon(std::string_view iconPath);
     int GetMonitorCount();
     int GetCurrentMonitor();
     void GetMonitorSize(int monitor, int& width, int& height);
     int GetMonitorRefreshRate(int monitor);
     void GetMonitorPosition(int monitor, int& x, int& y);
-    const char* GetMonitorName(int monitor);
+    std::string GetMonitorName(int monitor);
 
     // Time and FPS
     float GetFrameTime();

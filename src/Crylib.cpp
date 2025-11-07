@@ -256,12 +256,10 @@ namespace cl
         return s_crylib->window->ShouldClose();
     }
 
-    void SetWindowTitle(const char* title)
+    void SetWindowTitle(std::string_view title)
     {
         if (s_crylib && s_crylib->window)
-        {
-            s_crylib->window->SetWindowTitle(title);
-        }
+            s_crylib->window->SetWindowTitle(title.data());
     }
 
     void GetWindowSize(int& width, int& height)
@@ -350,10 +348,10 @@ namespace cl
             s_crylib->window->SetOpacity(opacity);
     }
 
-    void SetWindowIcon(const char* iconPath)
+    void SetWindowIcon(std::string_view iconPath)
     {
         if (s_crylib && s_crylib->window)
-            s_crylib->window->SetIcon(iconPath);
+            s_crylib->window->SetIcon(iconPath.data());
     }
 
     int GetMonitorCount()
@@ -399,10 +397,11 @@ namespace cl
         }
     }
 
-    const char* GetMonitorName(int monitor)
+    std::string GetMonitorName(int monitor)
     {
         if (!s_crylib || !s_crylib->window)
             return "Unknown";
+
         return s_crylib->window->GetMonitorName(monitor);
     }
 

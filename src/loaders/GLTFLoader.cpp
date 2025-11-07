@@ -10,7 +10,7 @@
 
 namespace cl
 {
-    Model* LoadGLTF(const char* filePath)
+    Model* LoadGLTF(std::string_view filePath)
     {
         if (!std::filesystem::exists(filePath))
         {
@@ -20,11 +20,11 @@ namespace cl
 
         cgltf_options options = {};
         cgltf_data* data = nullptr;
-        cgltf_result result = cgltf_parse_file(&options, filePath, &data);
+        cgltf_result result = cgltf_parse_file(&options, filePath.data(), &data);
         if (result != cgltf_result_success)
             return nullptr;
 
-        result = cgltf_load_buffers(&options, data, filePath);
+        result = cgltf_load_buffers(&options, data, filePath.data());
 
         if (result != cgltf_result_success)
         {
@@ -596,7 +596,7 @@ namespace cl
         return model;
     }
 
-    AnimationClip* LoadAnimationFromGLTF(const char* filePath, size_t animationIndex)
+    AnimationClip* LoadAnimationFromGLTF(std::string_view filePath, size_t animationIndex)
     {
         if (!std::filesystem::exists(filePath))
         {
@@ -606,11 +606,11 @@ namespace cl
 
         cgltf_options options = {};
         cgltf_data* data = nullptr;
-        cgltf_result result = cgltf_parse_file(&options, filePath, &data);
+        cgltf_result result = cgltf_parse_file(&options, filePath.data(), &data);
         if (result != cgltf_result_success)
             return nullptr;
 
-        result = cgltf_load_buffers(&options, data, filePath);
+        result = cgltf_load_buffers(&options, data, filePath.data());
         if (result != cgltf_result_success)
         {
             cgltf_free(data);
@@ -760,7 +760,7 @@ namespace cl
         return clip;
     }
 
-    AnimationClip* LoadAnimationFromGLTF(const char* filePath, const std::string& animationName)
+    AnimationClip* LoadAnimationFromGLTF(std::string_view filePath, std::string_view animationName)
     {
         if (!std::filesystem::exists(filePath))
         {
@@ -770,11 +770,11 @@ namespace cl
 
         cgltf_options options = {};
         cgltf_data* data = nullptr;
-        cgltf_result result = cgltf_parse_file(&options, filePath, &data);
+        cgltf_result result = cgltf_parse_file(&options, filePath.data(), &data);
         if (result != cgltf_result_success)
             return nullptr;
 
-        result = cgltf_load_buffers(&options, data, filePath);
+        result = cgltf_load_buffers(&options, data, filePath.data());
         if (result != cgltf_result_success)
         {
             cgltf_free(data);
@@ -806,7 +806,7 @@ namespace cl
         }
 
         AnimationClip* clip = new AnimationClip();
-        clip->SetName(animationName);
+        clip->SetName(animationName.data());
         float maxTime = 0.0f;
 
         for (size_t j = 0; j < anim->channels_count; ++j)
@@ -929,7 +929,7 @@ namespace cl
         return clip;
     }
 
-    std::vector<AnimationClip*> LoadAnimationsFromGLTF(const char* filePath)
+    std::vector<AnimationClip*> LoadAnimationsFromGLTF(std::string_view filePath)
     {
         std::vector<AnimationClip*> clips;
         if (!std::filesystem::exists(filePath))
@@ -940,12 +940,12 @@ namespace cl
 
         cgltf_options options = {};
         cgltf_data* data = nullptr;
-        cgltf_result result = cgltf_parse_file(&options, filePath, &data);
+        cgltf_result result = cgltf_parse_file(&options, filePath.data(), &data);
 
         if (result != cgltf_result_success)
             return clips;
 
-        result = cgltf_load_buffers(&options, data, filePath);
+        result = cgltf_load_buffers(&options, data, filePath.data());
         if (result != cgltf_result_success)
         {
             cgltf_free(data);

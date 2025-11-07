@@ -64,27 +64,27 @@ namespace cl
 
         // User parameter management
         /// Stores parameters for your own usage. Does not affect materials or shaders.
-        void SetUserParam(const std::string& name, const MaterialParam& param);
-        const MaterialParam* GetUserParam(const std::string& name) const;
-        bool HasUserParam(const std::string& name) const;
-        void RemoveUserParam(const std::string& name);
+        void SetUserParam(std::string_view name, const MaterialParam& param);
+        const MaterialParam* GetUserParam(std::string_view name) const;
+        bool HasUserParam(std::string_view name) const;
+        void RemoveUserParam(std::string_view name);
         void ClearUserParams();
 
         // Shader parameter management
         /// Sets shader float uniforms only for this material. Use SetUniform() for global shader uniforms.
-        void SetShaderParam(const std::string& name, const float v);
+        void SetShaderParam(std::string_view name, const float v);
         /// Sets shader int uniforms only for this material. Use SetUniform() for global shader uniforms.
-        void SetShaderParam(const std::string& name, const int v);
+        void SetShaderParam(std::string_view name, const int v);
         /// Sets shader vector2 (float[2]) uniforms only for this material. Use SetUniform() for global shader uniforms.
-        void SetShaderParam(const std::string& name, const float(&v2)[2]);
+        void SetShaderParam(std::string_view name, const float(&v2)[2]);
         /// Sets shader vector3 (float[3]) uniforms only for this material. Use SetUniform() for global shader uniforms.
-        void SetShaderParam(const std::string& name, const float(&v3)[3]);
+        void SetShaderParam(std::string_view name, const float(&v3)[3]);
         /// Sets shader vector4/quaternion (float[4]) uniforms only for this material. Use SetUniform() for global shader uniforms.
-        void SetShaderParam(const std::string& name, const float(&v4)[4]);
+        void SetShaderParam(std::string_view name, const float(&v4)[4]);
         /// Sets shader matrix (float[16]) uniforms only for this material. Use SetUniform() for global shader uniforms.
-        void SetShaderParam(const std::string& name, const float(&m4)[16]);
+        void SetShaderParam(std::string_view name, const float(&m4)[16]);
         /// Sets shader texture uniforms only for this material. Use SetUniform() for global shader uniforms.
-        void SetShaderParam(const std::string& name, Texture* texture);
+        void SetShaderParam(std::string_view name, Texture* texture);
 
         /// Applies the material shader parameters to the shader uniforms. WARNING: This should be only used internally.
         void ApplyShaderUniforms();

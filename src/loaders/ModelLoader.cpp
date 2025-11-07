@@ -13,7 +13,7 @@
 
 namespace cl
 {
-    Model* LoadModel(const char* filePath)
+    Model* LoadModel(std::string_view filePath)
     {
         std::filesystem::path path = filePath;
 
@@ -44,5 +44,44 @@ namespace cl
             instance->m_animator.SetSkeleton(instance->m_skeleton);
 
         return instance;
+    }
+    AnimationClip* LoadAnimation(std::string_view filePath, size_t animationIndex)
+    {
+        std::filesystem::path path = filePath;
+
+        if (path.extension() == ".gltf" || path.extension() == ".glb")
+            return LoadAnimationFromGLTF(filePath, animationIndex);
+        else if (path.extension() == ".fbx")
+            return LoadAnimationFromFBX(filePath, animationIndex);
+
+        std::cout << "[ERROR] Failed to load animation for \"" << filePath << "\". This model format may not support animations." << std::endl;
+
+        return nullptr;
+    }
+    AnimationClip* LoadAnimation(std::string_view filePath, std::string_view animationName)
+    {
+        std::filesystem::path path = filePath;
+
+        if (path.extension() == ".gltf" || path.extension() == ".glb")
+            return LoadAnimationFromGLTF(filePath, animationName);
+        else if (path.extension() == ".fbx")
+            return LoadAnimationFromFBX(filePath, animationName);
+
+        std::cout << "[ERROR] Failed to load animation for \"" << filePath << "\". This model format may not support animations." << std::endl;
+
+        return nullptr;
+    }
+    std::vector<AnimationClip*> LoadAnimations(std::string_view filePath)
+    {
+        std::filesystem::path path = filePath;
+
+        if (path.extension() == ".gltf" || path.extension() == ".glb")
+            return LoadAnimations(filePath);
+        else if (path.extension() == ".fbx")
+            return LoadAnimations(filePath);
+
+        std::cout << "[ERROR] Failed to load animations for \"" << filePath << "\". This model format may not support animations." << std::endl;
+
+        return {};
     }
 }

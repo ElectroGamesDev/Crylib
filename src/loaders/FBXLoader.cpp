@@ -172,7 +172,7 @@ namespace cl
         }
     }
 
-    Model* LoadFBX(const char* filePath)
+    Model* LoadFBX(std::string_view filePath)
     {
         if (!std::filesystem::exists(filePath))
         {
@@ -191,7 +191,7 @@ namespace cl
         options.generate_missing_normals = true;
 
         ufbx_error error;
-        ufbx_scene* data = ufbx_load_file(filePath, &options, &error);
+        ufbx_scene* data = ufbx_load_file(filePath.data(), &options, &error);
         if (!data)
         {
             std::cerr << "[ERROR] Failed to load \"" << filePath << "\": " << error.description.data << std::endl;
@@ -584,8 +584,7 @@ namespace cl
         return model;
     }
 
-    // Load animation by index
-    AnimationClip* LoadAnimationFromFBX(const char* filePath, size_t animationIndex)
+    AnimationClip* LoadAnimationFromFBX(std::string_view filePath, size_t animationIndex)
     {
         if (!std::filesystem::exists(filePath))
         {
@@ -599,7 +598,7 @@ namespace cl
         options.space_conversion = UFBX_SPACE_CONVERSION_MODIFY_GEOMETRY;
 
         ufbx_error error;
-        ufbx_scene* scene = ufbx_load_file(filePath, &options, &error);
+        ufbx_scene* scene = ufbx_load_file(filePath.data(), &options, &error);
         if (!scene) return nullptr;
 
         if (animationIndex >= scene->anim_stacks.count)
@@ -645,8 +644,7 @@ namespace cl
         return clip;
     }
 
-    // Load animation by name
-    AnimationClip* LoadAnimationFromFBX(const char* filePath, const std::string& animationName)
+    AnimationClip* LoadAnimationFromFBX(std::string_view filePath, std::string_view animationName)
     {
         if (!std::filesystem::exists(filePath))
         {
@@ -660,7 +658,7 @@ namespace cl
         options.space_conversion = UFBX_SPACE_CONVERSION_MODIFY_GEOMETRY;
 
         ufbx_error error;
-        ufbx_scene* scene = ufbx_load_file(filePath, &options, &error);
+        ufbx_scene* scene = ufbx_load_file(filePath.data(), &options, &error);
 
         if (!scene)
             return nullptr;
@@ -703,7 +701,7 @@ namespace cl
         }
 
         AnimationClip* clip = new AnimationClip();
-        clip->SetName(animationName);
+        clip->SetName(animationName.data());
 
         ufbx_anim* uanim = animStack->anim;
         float maxTime = 0.0f;
@@ -716,8 +714,7 @@ namespace cl
         return clip;
     }
 
-    // Load all animations in file
-    std::vector<AnimationClip*> LoadAnimationsFromFBX(const char* filePath)
+    std::vector<AnimationClip*> LoadAnimationsFromFBX(std::string_view filePath)
     {
         std::vector<AnimationClip*> clips;
         if (!std::filesystem::exists(filePath))
@@ -732,7 +729,7 @@ namespace cl
         options.space_conversion = UFBX_SPACE_CONVERSION_MODIFY_GEOMETRY;
 
         ufbx_error error;
-        ufbx_scene* scene = ufbx_load_file(filePath, &options, &error);
+        ufbx_scene* scene = ufbx_load_file(filePath.data(), &options, &error);
         if (!scene) return clips;
 
         std::unordered_map<ufbx_node*, int> nodeToJointMap;

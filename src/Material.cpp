@@ -70,27 +70,27 @@ namespace cl
     }
 
     // User parameters
-    void Material::SetUserParam(const std::string& name, const MaterialParam& param)
+    void Material::SetUserParam(std::string_view name, const MaterialParam& param)
     {
-        m_UserParams[name] = param;
+        m_UserParams[name.data()] = param;
     }
 
-    const MaterialParam* Material::GetUserParam(const std::string& name) const
+    const MaterialParam* Material::GetUserParam(std::string_view name) const
     {
-        auto it = m_UserParams.find(name);
+        auto it = m_UserParams.find(name.data());
         if (it == m_UserParams.end())
             return nullptr;
         return &it->second;
     }
 
-    bool Material::HasUserParam(const std::string& name) const
+    bool Material::HasUserParam(std::string_view name) const
     {
-        return m_UserParams.find(name) != m_UserParams.end();
+        return m_UserParams.find(name.data()) != m_UserParams.end();
     }
 
-    void Material::RemoveUserParam(const std::string& name)
+    void Material::RemoveUserParam(std::string_view name)
     {
-        m_UserParams.erase(name);
+        m_UserParams.erase(name.data());
     }
 
     void Material::ClearUserParams()
@@ -99,41 +99,41 @@ namespace cl
     }
 
     // Shader parameters
-    void Material::SetShaderParam(const std::string& name, const float v)
+    void Material::SetShaderParam(std::string_view name, const float v)
     {
-        m_ShaderParams.push_back({ name, UniformType::Vec4, v });
+        m_ShaderParams.push_back({ name.data(), UniformType::Vec4, v });
     }
 
-    void Material::SetShaderParam(const std::string& name, const int v)
+    void Material::SetShaderParam(std::string_view name, const int v)
     {
-        m_ShaderParams.push_back({ name, UniformType::Vec4, v });
+        m_ShaderParams.push_back({ name.data(), UniformType::Vec4, v });
     }
 
-    void Material::SetShaderParam(const std::string& name, const float(&v2)[2])
+    void Material::SetShaderParam(std::string_view name, const float(&v2)[2])
     {
-        m_ShaderParams.push_back({ name, UniformType::Vec4, std::array<float, 2>{ v2[0], v2[1] } });
+        m_ShaderParams.push_back({ name.data(), UniformType::Vec4, std::array<float, 2>{ v2[0], v2[1] } });
     }
 
-    void Material::SetShaderParam(const std::string& name, const float(&v3)[3])
+    void Material::SetShaderParam(std::string_view name, const float(&v3)[3])
     {
-        m_ShaderParams.push_back({ name, UniformType::Vec4, std::array<float, 3>{ v3[0], v3[1], v3[2] } });
+        m_ShaderParams.push_back({ name.data(), UniformType::Vec4, std::array<float, 3>{ v3[0], v3[1], v3[2] } });
     }
 
-    void Material::SetShaderParam(const std::string& name, const float(&v4)[4])
+    void Material::SetShaderParam(std::string_view name, const float(&v4)[4])
     {
-        m_ShaderParams.push_back({ name, UniformType::Vec4, std::array<float, 4>{ v4[0], v4[1], v4[2], v4[3] } });
+        m_ShaderParams.push_back({ name.data(), UniformType::Vec4, std::array<float, 4>{ v4[0], v4[1], v4[2], v4[3] } });
     }
 
-    void Material::SetShaderParam(const std::string& name, const float(&m4)[16])
+    void Material::SetShaderParam(std::string_view name, const float(&m4)[16])
     {
         std::array<float, 16> arr;
         std::copy(std::begin(m4), std::end(m4), arr.begin());
-        m_ShaderParams.push_back({ name, UniformType::Mat4, arr });
+        m_ShaderParams.push_back({ name.data(), UniformType::Mat4, arr });
     }
 
-    void Material::SetShaderParam(const std::string& name, Texture* texture)
+    void Material::SetShaderParam(std::string_view name, Texture* texture)
     {
-        m_ShaderParams.push_back({ name, UniformType::Sampler, texture });
+        m_ShaderParams.push_back({ name.data(), UniformType::Sampler, texture });
     }
 
     void Material::ApplyShaderUniforms()

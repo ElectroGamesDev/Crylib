@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #if defined(_WIN32) || defined(_WIN64)
     #define PLATFORM_WINDOWS
 #elif defined(__linux__)
@@ -23,7 +25,7 @@ namespace cl
 
     struct Config
     {
-        const char* windowTitle = "Crylib Application";
+        std::string windowTitle = "Crylib Application";
         int windowWidth = 800;
         int windowHeight = 600;
         bool windowResizable = true;

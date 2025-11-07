@@ -7,10 +7,10 @@
 
 namespace cl
 {
-    Model* LoadModel(const char* filePath);
+    Model* LoadModel(std::string_view filePath);
     Model* LoadInstance(const Model* model);
 
-    AnimationClip* LoadAnimation(const char* filePath, size_t animationIndex = 0);
-    AnimationClip* LoadAnimation(const char* filePath, const std::string& animationName);
-    std::vector<AnimationClip*> LoadAnimations(const char* filePath);
+    AnimationClip* LoadAnimation(std::string_view filePath, size_t animationIndex = 0);
+    AnimationClip* LoadAnimation(std::string_view filePath, std::string_view animationName);
+    std::vector<AnimationClip*> LoadAnimations(std::string_view filePath);
 }

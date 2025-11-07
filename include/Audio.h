@@ -150,11 +150,11 @@ namespace cl {
 
     // Audio device management
     int GetAudioDeviceCount(ma_device_type type = ma_device_type_playback);
-    const char* GetAudioDeviceName(int index, ma_device_type type = ma_device_type_playback);
+    std::string GetAudioDeviceName(int index, ma_device_type type = ma_device_type_playback);
     bool SetAudioDevice(int index);
 
     // Sound Loading/Unloading
-    Sound LoadSound(const char* fileName);
+    Sound LoadSound(std::string_view fileName);
     Sound LoadSoundFromWave(const void* data, unsigned int frameCount, unsigned int sampleRate, unsigned int channels, ma_format format = ma_format_f32);
     bool IsSoundReady(Sound sound);
     void UnloadSound(Sound sound);
@@ -173,7 +173,7 @@ namespace cl {
     void SetSoundPan(Sound sound, float pan);
 
     // Music Loading/Unloading
-    Music LoadMusicStream(const char* fileName);
+    Music LoadMusicStream(std::string_view fileName);
     bool IsMusicReady(Music music);
     void UnloadMusicStream(Music music);
 
@@ -252,7 +252,7 @@ namespace cl {
     void StopAudioRecording();
     bool IsRecordingAudio();
     std::vector<float> GetRecordedAudio();
-    void SaveRecordedAudio(const char* fileName);
+    void SaveRecordedAudio(std::string_view fileName);
 
     // Waveform Generation
     Sound GenerateSoundWave(int waveType, float frequency, float duration, unsigned int sampleRate = 44100);
@@ -264,7 +264,7 @@ namespace cl {
     std::vector<float> GetAudioSpectrumData(int sampleCount = 512);
 
     // Utility Functions
-    const char* GetAudioFormatName(ma_format format);
+    std::string GetAudioFormatName(ma_format format);
     unsigned int GetAudioFormatSize(ma_format format);
 
     // Wave types for generation

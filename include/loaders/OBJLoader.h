@@ -4,5 +4,5 @@
 
 namespace cl
 {
-    Model* LoadOBJ(const char* filePath);
+    Model* LoadOBJ(std::string_view filePath);
 }

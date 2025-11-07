@@ -7,9 +7,14 @@
 
 namespace cl
 {
-    Model* LoadFBX(const char* filePath);
+    Model* LoadFBX(std::string_view filePath);
 
-    AnimationClip* LoadAnimationFromFBX(const char* filePath, size_t animationIndex = 0);
-    AnimationClip* LoadAnimationFromFBX(const char* filePath, const std::string& animationName);
-    std::vector<AnimationClip*> LoadAnimationsFromFBX(const char* filePath);
+    /// Load animation by index
+    AnimationClip* LoadAnimationFromFBX(std::string_view filePath, size_t animationIndex = 0);
+
+    /// Load animation by name
+    AnimationClip* LoadAnimationFromFBX(std::string_view filePath, std::string_view animationName);
+
+    // Load all animations in file
+    std::vector<AnimationClip*> LoadAnimationsFromFBX(std::string_view filePath);
 }

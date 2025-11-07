@@ -53,17 +53,17 @@ namespace cl
     {
         TextureCache() = default;
 
-        Texture* GetIfExists(const std::string& path)
+        Texture* GetIfExists(std::string_view path)
         {
             std::shared_lock lock(mutex_);
-            auto it = cache_.find(path);
+            auto it = cache_.find(path.data());
             return (it != cache_.end()) ? it->second : nullptr;
         }
 
-        void Insert(const std::string& path, Texture* tex)
+        void Insert(std::string_view path, Texture* tex)
         {
             std::unique_lock lock(mutex_);
-            cache_[path] = tex;
+            cache_[path.data()] = tex;
         }
 
         std::unordered_map<std::string, Texture*> cache_;
@@ -81,7 +81,7 @@ namespace cl
         return static_cast<size_t>(hwThreads >= 2 ? hwThreads - 1 : 1);
     }
 
-    Model* LoadOBJ(const char* filePath)
+    Model* LoadOBJ(std::string_view filePath)
     {
         if (!std::filesystem::exists(filePath))
         {
@@ -151,7 +151,7 @@ namespace cl
                 return tex;
             };
 
-        auto loadTextureWithCache = [&](const std::string& texPath, bool isColorTexture) -> Texture*
+        auto loadTextureWithCache = [&](std::string_view texPath, bool isColorTexture) -> Texture*
             {
                 if (texPath.empty())
                     return nullptr;

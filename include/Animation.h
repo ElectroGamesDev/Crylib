@@ -22,9 +22,9 @@ namespace cl
         std::unordered_map<std::string, int> boneMap;
         std::vector<Matrix4> finalMatrices;
 
-        int FindBoneIndex(const std::string& name) const
+        int FindBoneIndex(std::string_view name) const
         {
-            auto it = boneMap.find(name);
+            auto it = boneMap.find(name.data());
             if (it != boneMap.end())
                 return it->second;
 
@@ -99,7 +99,7 @@ namespace cl
         AnimationClip(AnimationClip&& other) noexcept;
         AnimationClip& operator=(AnimationClip&& other) noexcept;
 
-        void SetName(const std::string& name) { m_name = name; }
+        void SetName(std::string_view name) { m_name = name; }
         const std::string& GetName() const { return m_name; }
 
         void SetDuration(float duration) { m_duration = duration; }

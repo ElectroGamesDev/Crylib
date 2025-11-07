@@ -68,14 +68,14 @@ namespace cl
 
         void AddAnimation(AnimationClip* clip);
         AnimationClip* GetAnimation(size_t index) const;
-        AnimationClip* GetAnimation(const std::string& name) const;
+        AnimationClip* GetAnimation(const std::string_view name) const;
         size_t GetAnimationCount() const { return m_animations.size(); }
 
         Animator* GetAnimator() { return &m_animator; }
         const Animator* GetAnimator() const { return &m_animator; }
 
         void PlayAnimationByIndex(size_t index, bool loop = true);
-        void PlayAnimationByName(const std::string& name, bool loop = true);
+        void PlayAnimationByName(std::string_view name, bool loop = true);
         void PlayAnimation(AnimationClip* clip, bool loop = true);
         void StopAnimation();
 

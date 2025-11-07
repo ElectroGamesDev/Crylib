@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Config.h"
+#include <string>
 
 struct GLFWwindow;
 
@@ -18,7 +19,7 @@ namespace cl
 
         virtual void* GetNativeWindowHandle() const = 0;
         virtual void GetWindowSize(int& width, int& height) const = 0;
-        virtual void SetWindowTitle(const char* title) = 0;
+        virtual void SetWindowTitle(std::string_view title) = 0;
         virtual bool IsFullscreen() const = 0;
         virtual bool IsHidden() const = 0;
         virtual bool IsMinimized() const = 0;
@@ -29,13 +30,13 @@ namespace cl
         virtual void Minimize() = 0;
         virtual void Restore() = 0;
         virtual void SetOpacity(float opacity) = 0;
-        virtual void SetIcon(const char* iconPath) = 0;
+        virtual void SetIcon(std::string_view iconPath) = 0;
         virtual int GetMonitorCount() const = 0;
         virtual int GetCurrentMonitor() const = 0;
         virtual void GetMonitorSize(int monitor, int& width, int& height) const = 0;
         virtual int GetMonitorRefreshRate(int monitor) const = 0;
         virtual void GetMonitorPosition(int monitor, int& x, int& y) const = 0;
-        virtual const char* GetMonitorName(int monitor) const = 0;
+        virtual std::string GetMonitorName(int monitor) const = 0;
 
         static Window* Create();
     };
@@ -54,7 +55,7 @@ namespace cl
 
         void* GetNativeWindowHandle() const override;
         void GetWindowSize(int& width, int& height) const override;
-        void SetWindowTitle(const char* title) override;
+        void SetWindowTitle(std::string_view title) override;
         bool IsFullscreen() const override;
         bool IsHidden() const override;
         bool IsMinimized() const override;
@@ -65,13 +66,13 @@ namespace cl
         void Minimize() override;
         void Restore() override;
         void SetOpacity(float opacity) override;
-        void SetIcon(const char* iconPath) override;
+        void SetIcon(std::string_view iconPath) override;
         int GetMonitorCount() const override;
         int GetCurrentMonitor() const override;
         void GetMonitorSize(int monitor, int& width, int& height) const override;
         int GetMonitorRefreshRate(int monitor) const override;
         void GetMonitorPosition(int monitor, int& x, int& y) const override;
-        const char* GetMonitorName(int monitor) const override;
+        std::string GetMonitorName(int monitor) const override;
 
     private:
         static void GLFWKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);

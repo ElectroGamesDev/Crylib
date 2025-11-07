@@ -270,7 +270,7 @@ namespace cl
         return m_animations[index];
     }
 
-    AnimationClip* Model::GetAnimation(const std::string& name) const
+    AnimationClip* Model::GetAnimation(std::string_view name) const
     {
         for (auto* clip : m_animations)
         {
@@ -287,7 +287,7 @@ namespace cl
             m_animator.PlayAnimation(clip, loop);
     }
 
-    void Model::PlayAnimationByName(const std::string& name, bool loop)
+    void Model::PlayAnimationByName(std::string_view name, bool loop)
     {
         AnimationClip* clip = GetAnimation(name);
         if (clip)

@@ -30,17 +30,13 @@ namespace cl
     void WindowsWindow::GLFWKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
     {
         if (action == GLFW_PRESS || action == GLFW_RELEASE)
-        {
             Input::UpdateKeyState(static_cast<KeyCode>(key), action == GLFW_PRESS);
-        }
     }
 
     void WindowsWindow::GLFWMouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
     {
         if (action == GLFW_PRESS || action == GLFW_RELEASE)
-        {
             Input::UpdateMouseButtonState(static_cast<MouseButton>(button), action == GLFW_PRESS);
-        }
     }
 
     void WindowsWindow::GLFWCursorPosCallback(GLFWwindow* window, double xpos, double ypos)
@@ -78,13 +74,7 @@ namespace cl
         m_width = config.windowWidth;
         m_height = config.windowHeight;
 
-        m_window = glfwCreateWindow(
-            m_width,
-            m_height,
-            config.windowTitle,
-            config.windowFullscreen ? glfwGetPrimaryMonitor() : nullptr,
-            nullptr
-        );
+        m_window = glfwCreateWindow(m_width, m_height, config.windowTitle.c_str(), config.windowFullscreen ? glfwGetPrimaryMonitor() : nullptr, nullptr);
 
         if (!m_window)
         {
@@ -118,6 +108,7 @@ namespace cl
             glfwDestroyWindow(m_window);
             m_window = nullptr;
         }
+
         glfwTerminate();
     }
 
@@ -129,9 +120,7 @@ namespace cl
     void WindowsWindow::GetWindowSize(int& width, int& height) const
     {
         if (m_window)
-        {
             glfwGetWindowSize(m_window, &width, &height);
-        }
         else
         {
             width = m_width;
@@ -139,12 +128,10 @@ namespace cl
         }
     }
 
-    void WindowsWindow::SetWindowTitle(const char* title)
+    void WindowsWindow::SetWindowTitle(std::string_view title)
     {
         if (m_window)
-        {
-            glfwSetWindowTitle(m_window, title);
-        }
+            glfwSetWindowTitle(m_window, title.data());
     }
 
     bool WindowsWindow::IsFullscreen() const
@@ -230,7 +217,7 @@ namespace cl
             glfwSetWindowOpacity(m_window, opacity);
     }
 
-    void WindowsWindow::SetIcon(const char* iconPath)
+    void WindowsWindow::SetIcon(std::string_view iconPath)
     {
         if (!m_window)
             return;
@@ -324,7 +311,7 @@ namespace cl
         }
     }
 
-    const char* WindowsWindow::GetMonitorName(int monitor) const
+    std::string WindowsWindow::GetMonitorName(int monitor) const
     {
         int count;
         GLFWmonitor** monitors = glfwGetMonitors(&count);

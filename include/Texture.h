@@ -2,6 +2,7 @@
 
 #include <bgfx.h>
 #include <vector>
+#include <string_view>
 
 namespace cl
 {
@@ -13,7 +14,7 @@ namespace cl
         Texture();
         ~Texture();
 
-        bool LoadFromFile(const char* filepath, bool isColorTexture = true);
+        bool LoadFromFile(std::string_view filepath, bool isColorTexture = true);
         bool LoadFromMemory(const void* data, int width, int height, int channels, bool isColorTexture = true);
 
         void Destroy();

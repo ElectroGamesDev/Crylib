@@ -36,11 +36,11 @@ namespace cl
         }
     }
 
-    bool Texture::LoadFromFile(const char* filepath, bool isColorTexture)
+    bool Texture::LoadFromFile(std::string_view filepath, bool isColorTexture)
     {
         bx::FileReaderI* reader = BX_NEW(&s_allocator, bx::FileReader);
 
-        if (!bx::open(reader, filepath))
+        if (!bx::open(reader, filepath.data()))
         {
             bx::deleteObject(&s_allocator, reader);
             return false;
