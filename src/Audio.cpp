@@ -1127,8 +1127,7 @@ namespace cl {
     }
 
     void UpdateSoundWave(Sound sound, int waveType, float frequency) {
-        // Note: This would require regenerating the sound buffer
-        // Simplified implementation - in practice you'd regenerate the waveform
+        // Todo: Implement this. We would need to regenerate the sound buffer
     }
 
     // Audio Analysis
@@ -1149,8 +1148,7 @@ namespace cl {
     }
 
     std::vector<float> GetAudioSpectrumData(int sampleCount) {
-        // Note: FFT spectrum analysis would require additional DSP implementation
-        // This is a placeholder that returns zeros
+        // Todo: Implement this. FFT spectrum analysis would require additional DSP implementation
         return std::vector<float>(sampleCount, 0.0f);
     }
 
