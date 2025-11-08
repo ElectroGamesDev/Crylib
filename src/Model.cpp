@@ -125,23 +125,15 @@ namespace cl
         MarkTransformDirty();
     }
 
-    void Model::SetPosition(float x, float y, float z)
-    {
-        m_position.x = x;
-        m_position.y = y;
-        m_position.z = z;
-        MarkTransformDirty();
-    }
-
     void Model::SetRotation(const Vector3& rot)
     {
         m_rotationQuat = Quaternion::FromEuler(rot.y, rot.x, rot.z);
         MarkTransformDirty();
     }
 
-    void Model::SetRotation(float x, float y, float z)
+    void Model::SetRotationQuat(const Quaternion& rot)
     {
-        m_rotationQuat = Quaternion::FromEuler(y, x, z);
+        m_rotationQuat = rot;
         MarkTransformDirty();
     }
 
@@ -150,17 +142,14 @@ namespace cl
         return m_rotationQuat.ToEuler();
     }
 
+    Quaternion Model::GetRotationQuat() const
+    {
+        return m_rotationQuat;
+    }
+
     void Model::SetScale(const Vector3& scale)
     {
         m_scale = scale;
-        MarkTransformDirty();
-    }
-
-    void Model::SetScale(float x, float y, float z)
-    {
-        m_scale.x = x;
-        m_scale.y = y;
-        m_scale.z = z;
         MarkTransformDirty();
     }
 

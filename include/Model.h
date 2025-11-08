@@ -34,16 +34,15 @@ namespace cl
         void SetMaterial(Material* material);
 
         void SetPosition(const Vector3& pos);
-        void SetPosition(float x, float y, float z);
         const Vector3& GetPosition() const { return m_position; }
         Vector3& GetPosition() { return m_position; }
 
         void SetRotation(const Vector3& rot);
-        void SetRotation(float x, float y, float z);
+        void SetRotationQuat(const Quaternion& rot);
         Vector3 GetRotation() const;
+        Quaternion GetRotationQuat() const;
 
         void SetScale(const Vector3& scale);
-        void SetScale(float x, float y, float z);
         void SetScale(float uniformScale);
         const Vector3& GetScale() const { return m_scale; }
         Vector3& GetScale() { return m_scale; }
