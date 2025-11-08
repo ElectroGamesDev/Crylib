@@ -275,7 +275,7 @@ namespace cl
         bgfx::submit(s_renderer->currentViewId, shader->GetHandle());
 
         // Update stats
-        //s_renderer->drawStats.drawCalls++;
+        s_renderer->drawStats.drawCalls++;
         s_renderer->drawStats.triangles += mesh->GetTriangleCount();
         s_renderer->drawStats.vertices += mesh->GetVertices().size();
         s_renderer->drawStats.indicies += mesh->GetIndices().size();
