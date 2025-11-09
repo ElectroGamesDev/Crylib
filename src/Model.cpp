@@ -1,6 +1,7 @@
 #include "Model.h"
 #include "Material.h"
 #include <algorithm>
+#include <iostream>
 
 namespace cl
 {
@@ -291,24 +292,42 @@ namespace cl
         return nullptr;
     }
 
-    void Model::PlayAnimationByIndex(size_t index, bool loop)
+    bool Model::PlayAnimationByIndex(size_t index, bool loop)
     {
         AnimationClip* clip = GetAnimation(index);
-        if (clip)
-            m_animator.PlayAnimation(clip, loop);
+        if (!clip)
+        {
+            std::cout << "[WARNING] Tried to play the animation at the index \"" << index << "\", but no animation at this index exists on this model.";
+            return false;
+        }
+
+        m_animator.PlayAnimation(clip, loop);
+        return true;
     }
 
-    void Model::PlayAnimationByName(std::string_view name, bool loop)
+    bool Model::PlayAnimationByName(std::string_view name, bool loop)
     {
         AnimationClip* clip = GetAnimation(name);
-        if (clip)
-            m_animator.PlayAnimation(clip, loop);
+        if (!clip)
+        {
+            std::cout << "[WARNING] Tried to play the animation \"" << name.data() << "\", but no animation with this name exists on this model.";
+            return false;
+        }
+
+        m_animator.PlayAnimation(clip, loop);
+        return true;
     }
 
-    void Model::PlayAnimation(AnimationClip* clip, bool loop)
+    bool Model::PlayAnimation(AnimationClip* clip, bool loop)
     {
-        if (clip)
-            m_animator.PlayAnimation(clip, loop);
+        if (!clip)
+        {
+            std::cout << "[WARNING] Tried to play an animation, but the clip is null.";
+            return false;
+        }
+        
+        m_animator.PlayAnimation(clip, loop);
+        return true;
     }
 
     void Model::StopAnimation()

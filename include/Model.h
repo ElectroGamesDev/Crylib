@@ -76,9 +76,9 @@ namespace cl
         Animator* GetAnimator() { return &m_animator; }
         const Animator* GetAnimator() const { return &m_animator; }
 
-        void PlayAnimationByIndex(size_t index, bool loop = true);
-        void PlayAnimationByName(std::string_view name, bool loop = true);
-        void PlayAnimation(AnimationClip* clip, bool loop = true);
+        bool PlayAnimationByIndex(size_t index, bool loop = true);
+        bool PlayAnimationByName(std::string_view name, bool loop = true);
+        bool PlayAnimation(AnimationClip* clip, bool loop = true);
         void StopAnimation();
 
         void UpdateAnimation(float deltaTime);
