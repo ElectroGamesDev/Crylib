@@ -293,37 +293,80 @@ namespace cl
         DrawMesh(mesh, transform, nullptr);
     }
 
-    void DrawModel(Model* model) // Todo: Remove the skeleton code and make this function call the other DrawModel()
-    {
-        if (!model)
-            return;
-
-        model->UpdateTransformMatrix();
-
-        const std::vector<Matrix4>* bones = nullptr;
-        if (model->GetAnimator() && model->HasSkeleton())
-            bones = &model->GetAnimator()->GetBoneMatrices();
-
-        // Todo: Fix this to do a single batch call. Potentially use bgfx::setInstanceDataBuffer(). Maybe can create like a Batch class/struct with a DrawBatch() function
-        for (const auto& mesh : model->GetMeshes())
-            DrawMesh(mesh.get(), model->GetTransformMatrix(), bones);
-    }
-
     void DrawModel(Model* model, const Vector3& position, const Vector3& rotation, const Vector3& scale)
     {
         if (!model || !model->HasMeshes())
             return;
 
-        Quaternion rotQuat = Quaternion::FromEuler(rotation.y, rotation.x, rotation.z);
-        Matrix4 transform = Matrix4::Translate(position) * rotQuat.ToMatrix() * Matrix4::Scale(scale);
+        // Todo: Fix this to do a single batch call. Potentially use bgfx::setInstanceDataBuffer(). Maybe can create like a Batch class/struct with a DrawBatch() function
 
+        Quaternion rotQuat = Quaternion::FromEuler(rotation.y, rotation.x, rotation.z);
+        Matrix4 baseTransform = Matrix4::Translate(position) * rotQuat.ToMatrix() * Matrix4::Scale(scale);
+
+        // Determine what animation data to use
+        const Animator* animator = model->GetAnimator();
         const std::vector<Matrix4>* bones = nullptr;
-        if (model->GetAnimator() && model->HasSkeleton())
-            bones = &model->GetAnimator()->GetBoneMatrices();
+        bool useNodeAnimation = false;
+
+        if (animator && animator->IsPlaying())
+        {
+            AnimationClip* currentClip = animator->GetCurrentClip();
+            if (currentClip)
+            {
+                if (currentClip->GetAnimationType() == AnimationType::Skeletal && model->HasSkeleton())
+                    bones = &animator->GetBoneMatrices();
+                else if (currentClip->GetAnimationType() == AnimationType::NodeBased)
+                    useNodeAnimation = true;
+            }
+        }
+        else if (animator && model->HasSkeleton())
+            bones = &animator->GetBoneMatrices(); // Even though there isn't an animation playing, we still need to bind the pose
+
+        // Draw all meshes
+        if (useNodeAnimation)
+        {
+            const auto& nodeTransforms = animator->GetNodeTransforms();
+
+            for (size_t i = 0; i < model->GetMeshes().size(); ++i)
+            {
+                const auto& mesh = model->GetMeshes()[i];
+                Matrix4 meshTransform = baseTransform;
+
+                // Checks if the mesh hs an animated node transform
+                if (i < nodeTransforms.size() && nodeTransforms[i] != Matrix4::Identity())
+                    meshTransform = baseTransform * nodeTransforms[i];
+                else if (!nodeTransforms.empty())
+                {
+                    for (const auto& transform : nodeTransforms)
+                    {
+                        if (transform != Matrix4::Identity())
+                        {
+                            meshTransform = baseTransform * transform;
+                            break;
+                        }
+                    }
+                }
+
+                DrawMesh(mesh.get(), meshTransform, nullptr);
+            }
+        }
+        else
+        {
+            for (const auto& mesh : model->GetMeshes())
+                DrawMesh(mesh.get(), baseTransform, bones);
+        }
+    }
+
+    void DrawModel(Model* model)
+    {
+        if (!model)
+            return;
+
+        //model->UpdateTransformMatrix();
 
         // Todo: Fix this to do a single batch call. Potentially use bgfx::setInstanceDataBuffer(). Maybe can create like a Batch class/struct with a DrawBatch() function
         for (const auto& mesh : model->GetMeshes())
-            DrawMesh(mesh.get(), transform, bones);
+            DrawModel(model, model->GetPosition(), model->GetRotation(), model->GetScale()); // Todo: Rotation quaternion is already calcuated, so calculating it again the other DrawModel() is unnecessary
     }
 
     void SetCullMode(bool enabled, bool clockwise)

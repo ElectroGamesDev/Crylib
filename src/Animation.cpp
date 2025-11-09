@@ -1,5 +1,6 @@
 #include "Animation.h"
 #include <algorithm>
+#include <iostream>
 
 namespace cl
 {
@@ -73,7 +74,7 @@ namespace cl
 
     void Animator::PlayAnimation(AnimationClip* clip, bool loop)
     {
-        if (!clip || !m_skeleton)
+        if (!clip)
             return;
 
         m_currentClip = clip;
@@ -82,13 +83,40 @@ namespace cl
         m_paused = false;
         m_loop = loop;
 
-        m_boneMatrices.resize(m_skeleton->bones.size());
-        m_localTransforms.resize(m_skeleton->bones.size());
-
-        for (size_t i = 0; i < m_skeleton->bones.size(); ++i)
+        if (clip->GetAnimationType() == AnimationType::Skeletal)
         {
-            m_boneMatrices[i] = Matrix4::Identity();
-            m_localTransforms[i] = m_skeleton->bones[i].localTransform;
+            if (!m_skeleton)
+            {
+                std::cout << "[WARNING] Failed to play the animation \"" << clip->GetName() << "\". This animation does not have a skeleton. Call \"clip.SetAnimationType(AnimationType::NodeBased)\" to change it to fix the issue.\n";
+                m_playing = false;
+                return;
+            }
+
+            m_boneMatrices.resize(m_skeleton->bones.size());
+            m_localTransforms.resize(m_skeleton->bones.size());
+
+            for (size_t i = 0; i < m_skeleton->bones.size(); ++i)
+            {
+                m_boneMatrices[i] = Matrix4::Identity();
+                m_localTransforms[i] = m_skeleton->bones[i].localTransform;
+            }
+        }
+        else
+        {
+            m_animatedNodeTransforms.clear();
+            m_nodeTransforms.clear();
+
+            const auto& nodeChannels = clip->GetNodeChannels();
+            int maxNodeIndex = -1;
+
+            for (const auto& channel : nodeChannels)
+            {
+                if (channel.targetNodeIndex > maxNodeIndex)
+                    maxNodeIndex = channel.targetNodeIndex;
+            }
+
+            if (maxNodeIndex >= 0)
+                m_nodeTransforms.resize(maxNodeIndex + 1, Matrix4::Identity());
         }
     }
 
@@ -111,7 +139,7 @@ namespace cl
 
     void Animator::Update(float deltaTime)
     {
-        if (!m_playing || m_paused || !m_currentClip || !m_skeleton)
+        if (!m_playing || m_paused || !m_currentClip)
             return;
 
         float duration = m_currentClip->GetDuration();
@@ -120,7 +148,7 @@ namespace cl
 
         m_currentTime += deltaTime * m_speed;
 
-        if (m_currentTime > m_currentClip->GetDuration())
+        if (m_currentTime > duration)
         {
             if (m_loop)
             {
@@ -134,9 +162,18 @@ namespace cl
             }
         }
 
-        SampleAnimation(m_currentTime);
-        CalculateBoneTransforms();
+        if (m_currentClip->GetAnimationType() == AnimationType::Skeletal)
+        {
+            if (m_skeleton)
+            {
+                SampleAnimation(m_currentTime);
+                CalculateBoneTransforms();
+            }
+        }
+        else
+            SampleNodeAnimation(m_currentTime);
     }
+
 
     void Animator::SetTime(float time)
     {
@@ -172,6 +209,152 @@ namespace cl
 
             m_localTransforms[channel.targetBoneIndex] = t * r * s;
         }
+    }
+
+    void Animator::SampleNodeAnimation(float time)
+    {
+        if (!m_currentClip)
+            return;
+
+        const auto& nodeChannels = m_currentClip->GetNodeChannels();
+
+        if (nodeChannels.empty())
+        {
+            m_animatedNodeTransforms.clear();
+            return;
+        }
+
+        m_animatedNodeTransforms.clear();
+
+        for (const auto& channel : nodeChannels)
+        {
+            if (channel.targetNodeIndex < 0)
+                continue;
+
+            Vector3 translation = InterpolateNodeTranslation(channel, time);
+            Quaternion rotation = InterpolateNodeRotation(channel, time);
+            Vector3 scale = InterpolateNodeScale(channel, time);
+
+            // Build the transform matrix
+            Matrix4 t = Matrix4::Translate(translation);
+            Matrix4 r = Matrix4::FromQuaternion(rotation);
+            Matrix4 s = Matrix4::Scale(scale);
+
+            Matrix4 localTransform = t * r * s;
+
+            // Store the transform for this node
+            m_animatedNodeTransforms[channel.targetNodeIndex] = localTransform;
+
+            // Update the node transforms vector
+            if (channel.targetNodeIndex < static_cast<int>(m_nodeTransforms.size()))
+                m_nodeTransforms[channel.targetNodeIndex] = localTransform;
+        }
+    }
+
+    Matrix4 Animator::GetNodeTransform(int nodeIndex) const
+    {
+        // Check if this node has an animated transform
+        auto it = m_animatedNodeTransforms.find(nodeIndex);
+        if (it != m_animatedNodeTransforms.end())
+            return it->second;
+
+        // Check the vector storage
+        if (nodeIndex >= 0 && nodeIndex < static_cast<int>(m_nodeTransforms.size()))
+            return m_nodeTransforms[nodeIndex];
+
+        return Matrix4::Identity();
+    }
+
+    Vector3 Animator::InterpolateNodeTranslation(const NodeAnimationChannel& channel, float time) const
+    {
+        if (channel.translations.empty())
+            return Vector3(0.0f, 0.0f, 0.0f);
+
+        if (channel.translations.size() == 1 || channel.times.empty())
+            return channel.translations[0];
+
+        int index = FindKeyframeIndex(channel.times, time);
+
+        if (index < 0)
+            return channel.translations[0];
+
+        if (index >= static_cast<int>(channel.translations.size()) - 1)
+            return channel.translations.back();
+
+        if (channel.interpolation == AnimationInterpolation::Step)
+            return channel.translations[index];
+
+        float t0 = channel.times[index];
+        float t1 = channel.times[index + 1];
+        float factor = (time - t0) / (t1 - t0);
+
+        const Vector3& v0 = channel.translations[index];
+        const Vector3& v1 = channel.translations[index + 1];
+
+        return Vector3(
+            v0.x + (v1.x - v0.x) * factor,
+            v0.y + (v1.y - v0.y) * factor,
+            v0.z + (v1.z - v0.z) * factor
+        );
+    }
+
+    Quaternion Animator::InterpolateNodeRotation(const NodeAnimationChannel& channel, float time) const
+    {
+        if (channel.rotations.empty())
+            return Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+
+        if (channel.rotations.size() == 1 || channel.times.empty())
+            return channel.rotations[0];
+
+        int index = FindKeyframeIndex(channel.times, time);
+
+        if (index < 0)
+            return channel.rotations[0];
+
+        if (index >= static_cast<int>(channel.rotations.size()) - 1)
+            return channel.rotations.back();
+
+        if (channel.interpolation == AnimationInterpolation::Step)
+            return channel.rotations[index];
+
+        float t0 = channel.times[index];
+        float t1 = channel.times[index + 1];
+        float factor = (time - t0) / (t1 - t0);
+
+        return Quaternion::Slerp(channel.rotations[index], channel.rotations[index + 1], factor);
+    }
+
+    Vector3 Animator::InterpolateNodeScale(const NodeAnimationChannel& channel, float time) const
+    {
+        if (channel.scales.empty())
+            return Vector3(1.0f, 1.0f, 1.0f);
+
+        if (channel.scales.size() == 1 || channel.times.empty())
+            return channel.scales[0];
+
+        int index = FindKeyframeIndex(channel.times, time);
+
+        if (index < 0)
+            return channel.scales[0];
+
+        if (index >= static_cast<int>(channel.scales.size()) - 1)
+            return channel.scales.back();
+
+        if (channel.interpolation == AnimationInterpolation::Step)
+            return channel.scales[index];
+
+        float t0 = channel.times[index];
+        float t1 = channel.times[index + 1];
+        float factor = (time - t0) / (t1 - t0);
+
+        const Vector3& v0 = channel.scales[index];
+        const Vector3& v1 = channel.scales[index + 1];
+
+        return Vector3(
+            v0.x + (v1.x - v0.x) * factor,
+            v0.y + (v1.y - v0.y) * factor,
+            v0.z + (v1.z - v0.z) * factor
+        );
     }
 
     void Animator::CalculateBoneTransforms()

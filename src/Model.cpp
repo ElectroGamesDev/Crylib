@@ -14,6 +14,7 @@ namespace cl
         , m_transformMatrix(Matrix4::Identity())
         , m_transformDirty(false)
         , m_skeleton(nullptr)
+        , m_nodeCount(0)
     {
         s_models.push_back(this);
     }
@@ -45,10 +46,12 @@ namespace cl
         , m_skeleton(other.m_skeleton)
         , m_animations(std::move(other.m_animations))
         , m_animator(std::move(other.m_animator))
+        , m_nodeCount(other.m_nodeCount)
     {
         other.m_meshes.clear();
         other.m_skeleton = nullptr;
         other.m_animations.clear();
+        other.m_nodeCount = 0;
         s_models.push_back(this);
     }
 
@@ -65,10 +68,12 @@ namespace cl
             m_transformDirty = other.m_transformDirty;
             m_skeleton = other.m_skeleton;
             m_animations = std::move(other.m_animations);
+            m_nodeCount = other.m_nodeCount;
             m_animator = std::move(other.m_animator);
             other.m_meshes.clear();
             other.m_skeleton = nullptr;
             other.m_animations.clear();
+            other.m_nodeCount = 0;
         }
         return *this;
     }
@@ -261,6 +266,7 @@ namespace cl
         m_meshes.clear();
         m_animations.clear();
         m_skeleton = nullptr;
+        m_nodeCount = 0;
     }
 
     void Model::SetSkeleton(Skeleton* skeleton)

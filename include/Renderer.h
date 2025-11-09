@@ -85,8 +85,8 @@ namespace cl
 
     void DrawMesh(Mesh* mesh, const Matrix4& transform, const std::vector<Matrix4>* bones);
     void DrawMesh(Mesh* mesh, const Vector3& position, const Vector3& rotation, const Vector3& scale);
-    void DrawModel(Model* model);
     void DrawModel(Model* model, const Vector3& position, const Vector3& rotation, const Vector3& scale);
+    void DrawModel(Model* model);
 
     void SetCullMode(bool enabled, bool clockwise = true);
     void SetDepthTest(bool enabled);

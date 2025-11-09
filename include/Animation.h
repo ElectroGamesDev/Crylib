@@ -75,6 +75,18 @@ namespace cl
         AnimationKeyframe() : time(0.0f), translation(0.0f, 0.0f, 0.0f), rotation(0.0f, 0.0f, 0.0f, 1.0f), scale(1.0f, 1.0f, 1.0f) {}
     };
 
+    struct NodeAnimationChannel
+    {
+        int targetNodeIndex;
+        std::vector<float> times;
+        std::vector<Vector3> translations;
+        std::vector<Quaternion> rotations;
+        std::vector<Vector3> scales;
+        AnimationInterpolation interpolation;
+
+        NodeAnimationChannel() : targetNodeIndex(-1), interpolation(AnimationInterpolation::Linear) {}
+    };
+
     struct AnimationChannel
     {
         int targetBoneIndex;
@@ -85,6 +97,12 @@ namespace cl
         AnimationInterpolation interpolation;
 
         AnimationChannel() : targetBoneIndex(-1), interpolation(AnimationInterpolation::Linear) {}
+    };
+
+    enum class AnimationType
+    {
+        Skeletal,
+        NodeBased
     };
 
     class AnimationClip
@@ -108,12 +126,20 @@ namespace cl
         void AddChannel(const AnimationChannel& channel) { m_channels.push_back(channel); }
         const std::vector<AnimationChannel>& GetChannels() const { return m_channels; }
 
+        void AddNodeChannel(const NodeAnimationChannel& channel) { m_nodeChannels.push_back(channel); }
+        const std::vector<NodeAnimationChannel>& GetNodeChannels() const { return m_nodeChannels; }
+
+        void SetAnimationType(AnimationType type) { m_animationType = type; }
+        AnimationType GetAnimationType() const { return m_animationType; }
+
         void Destroy();
 
     private:
         std::string m_name;
         float m_duration;
         std::vector<AnimationChannel> m_channels;
+        std::vector<NodeAnimationChannel> m_nodeChannels;
+        AnimationType m_animationType = AnimationType::Skeletal;
     };
 
     class Animator
@@ -145,11 +171,16 @@ namespace cl
 
         AnimationClip* GetCurrentClip() const { return m_currentClip; }
 
+        const std::vector<Matrix4>& GetNodeTransforms() const { return m_nodeTransforms; }
+        Matrix4 GetNodeTransform(int nodeIndex) const;
     private:
         Skeleton* m_skeleton;
         AnimationClip* m_currentClip;
         std::vector<Matrix4> m_boneMatrices;
         std::vector<Matrix4> m_localTransforms;
+
+        std::vector<Matrix4> m_nodeTransforms;
+        std::unordered_map<int, Matrix4> m_animatedNodeTransforms;
 
         float m_currentTime;
         float m_speed;
@@ -159,9 +190,15 @@ namespace cl
 
         void CalculateBoneTransforms();
         void SampleAnimation(float time);
+        void SampleNodeAnimation(float time);
         Vector3 InterpolateTranslation(const AnimationChannel& channel, float time) const;
         Quaternion InterpolateRotation(const AnimationChannel& channel, float time) const;
         Vector3 InterpolateScale(const AnimationChannel& channel, float time) const;
+
+        Vector3 InterpolateNodeTranslation(const NodeAnimationChannel& channel, float time) const;
+        Quaternion InterpolateNodeRotation(const NodeAnimationChannel& channel, float time) const;
+        Vector3 InterpolateNodeScale(const NodeAnimationChannel& channel, float time) const;
+
         int FindKeyframeIndex(const std::vector<float>& times, float time) const;
     };
 }

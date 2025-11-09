@@ -30,7 +30,7 @@ namespace cl
         return nullptr;
     }
 
-    void ProcessAnimationChannels(ufbx_anim* uanim, const std::unordered_map<ufbx_node*, int>& nodeToJointMap, AnimationClip* clip, float& maxTime)
+    void ProcessSkeletalAnimationChannels(ufbx_anim* uanim, const std::unordered_map<ufbx_node*, int>& nodeToJointMap, AnimationClip* clip, float& maxTime)
     {
         for (auto& pair : nodeToJointMap)
         {
@@ -120,25 +120,25 @@ namespace cl
                         Quaternion q;
                         switch (joint->rotation_order)
                         {
-                            case UFBX_ROTATION_ORDER_XYZ:
-                                q = Quaternion::FromEuler(euler.x, euler.y, euler.z);
-                                break;
-                            case UFBX_ROTATION_ORDER_XZY:
-                                q = Quaternion::FromEuler(euler.x, euler.z, euler.y);
-                                break;
-                            case UFBX_ROTATION_ORDER_YXZ:
-                                q = Quaternion::FromEuler(euler.y, euler.x, euler.z); break;
-                            case UFBX_ROTATION_ORDER_YZX: q = Quaternion::FromEuler(euler.y, euler.z, euler.x);
-                                break;
-                            case UFBX_ROTATION_ORDER_ZXY:
-                                q = Quaternion::FromEuler(euler.z, euler.x, euler.y);
-                                break;
-                            case UFBX_ROTATION_ORDER_ZYX:
-                                q = Quaternion::FromEuler(euler.z, euler.y, euler.x);
-                                break;
-                            default:
-                                q = Quaternion::FromEuler(euler.x, euler.y, euler.z);
-                                break;
+                        case UFBX_ROTATION_ORDER_XYZ:
+                            q = Quaternion::FromEuler(euler.x, euler.y, euler.z);
+                            break;
+                        case UFBX_ROTATION_ORDER_XZY:
+                            q = Quaternion::FromEuler(euler.x, euler.z, euler.y);
+                            break;
+                        case UFBX_ROTATION_ORDER_YXZ:
+                            q = Quaternion::FromEuler(euler.y, euler.x, euler.z); break;
+                        case UFBX_ROTATION_ORDER_YZX: q = Quaternion::FromEuler(euler.y, euler.z, euler.x);
+                            break;
+                        case UFBX_ROTATION_ORDER_ZXY:
+                            q = Quaternion::FromEuler(euler.z, euler.x, euler.y);
+                            break;
+                        case UFBX_ROTATION_ORDER_ZYX:
+                            q = Quaternion::FromEuler(euler.z, euler.y, euler.x);
+                            break;
+                        default:
+                            q = Quaternion::FromEuler(euler.x, euler.y, euler.z);
+                            break;
                         }
 
                         channel.rotations[t] = q;
@@ -150,6 +150,148 @@ namespace cl
                 [](ufbx_anim_curve* c, float t, float v) { return (float)ufbx_evaluate_curve(c, t, v); },
                 [](ufbx_anim_prop* p) { return p->anim_value->default_value; },
                 [&](AnimationChannel& channel, ufbx_anim_prop* prop, ufbx_node* joint)
+                {
+                    channel.scales.resize(channel.times.size());
+                    channel.translations.resize(channel.times.size(), Vector3(0, 0, 0));
+                    channel.rotations.resize(channel.times.size(), Quaternion(0, 0, 0, 1));
+
+                    for (size_t t = 0; t < channel.times.size(); ++t)
+                    {
+                        float time = channel.times[t];
+                        ufbx_vec3 val = prop->anim_value->default_value;
+
+                        for (int c = 0; c < 3; ++c)
+                        {
+                            if (prop->anim_value->curves[c])
+                                ((float*)&val)[c] = (float)ufbx_evaluate_curve(prop->anim_value->curves[c], time, ((float*)&val)[c]);
+                        }
+
+                        channel.scales[t] = Vector3(val.x, val.y, val.z);
+                    }
+                });
+        }
+    }
+
+    void ProcessNodeAnimationChannels(ufbx_anim* uanim, const std::unordered_map<ufbx_node*, int>& nodeToIndexMap, AnimationClip* clip, float& maxTime)
+    {
+        for (auto& pair : nodeToIndexMap)
+        {
+            ufbx_node* node = pair.first;
+            int nodeIndex = pair.second;
+
+            // Handle translation, rotation, or scale
+            auto process_prop = [&](const char* propName,
+                auto evalCurveFunc,
+                auto defaultValueFunc,
+                auto applyValueFunc)
+                {
+                    ufbx_anim_prop* prop = FindPropInAnim(uanim, &node->element, propName);
+                    if (!prop || !prop->anim_value)
+                        return;
+
+                    NodeAnimationChannel channel;
+                    channel.targetNodeIndex = nodeIndex;
+                    channel.interpolation = AnimationInterpolation::Linear;
+
+                    // Collect all keyframe times
+                    std::set<float> time_set;
+                    for (int c = 0; c < 3; ++c)
+                    {
+                        ufbx_anim_curve* curve = prop->anim_value->curves[c];
+                        if (!curve)
+                            continue;
+
+                        for (size_t k = 0; k < curve->keyframes.count; ++k)
+                            time_set.insert(static_cast<float>(curve->keyframes.data[k].time));
+                    }
+
+                    channel.times.assign(time_set.begin(), time_set.end());
+                    applyValueFunc(channel, prop, node);
+
+                    clip->AddNodeChannel(channel);
+                    if (!channel.times.empty())
+                        maxTime = std::max(maxTime, channel.times.back());
+                };
+
+            // Translation
+            process_prop("Lcl Translation",
+                [](ufbx_anim_curve* c, float t, float v) { return (float)ufbx_evaluate_curve(c, t, v); },
+                [](ufbx_anim_prop* p) { return p->anim_value->default_value; },
+                [&](NodeAnimationChannel& channel, ufbx_anim_prop* prop, ufbx_node* node)
+                {
+                    channel.translations.resize(channel.times.size());
+                    channel.rotations.resize(channel.times.size(), Quaternion(0, 0, 0, 1));
+                    channel.scales.resize(channel.times.size(), Vector3(1, 1, 1));
+
+                    for (size_t t = 0; t < channel.times.size(); ++t)
+                    {
+                        float time = channel.times[t];
+                        ufbx_vec3 val = prop->anim_value->default_value;
+
+                        for (int c = 0; c < 3; ++c)
+                        {
+                            if (prop->anim_value->curves[c])
+                                ((float*)&val)[c] = (float)ufbx_evaluate_curve(prop->anim_value->curves[c], time, ((float*)&val)[c]);
+                        }
+
+                        channel.translations[t] = Vector3(val.x, val.y, val.z);
+                    }
+                });
+
+            // Rotation
+            process_prop("Lcl Rotation",
+                [](ufbx_anim_curve* c, float t, float v) { return (float)ufbx_evaluate_curve(c, t, v); },
+                [](ufbx_anim_prop* p) { return p->anim_value->default_value; },
+                [&](NodeAnimationChannel& channel, ufbx_anim_prop* prop, ufbx_node* node)
+                {
+                    channel.rotations.resize(channel.times.size());
+                    channel.translations.resize(channel.times.size(), Vector3(0, 0, 0));
+                    channel.scales.resize(channel.times.size(), Vector3(1, 1, 1));
+
+                    for (size_t t = 0; t < channel.times.size(); ++t)
+                    {
+                        float time = channel.times[t];
+                        ufbx_vec3 euler = prop->anim_value->default_value;
+
+                        for (int c = 0; c < 3; ++c)
+                        {
+                            if (prop->anim_value->curves[c])
+                                ((float*)&euler)[c] = (float)ufbx_evaluate_curve(prop->anim_value->curves[c], time, ((float*)&prop->anim_value->default_value)[c]);
+                        }
+
+                        Quaternion q;
+                        switch (node->rotation_order)
+                        {
+                        case UFBX_ROTATION_ORDER_XYZ:
+                            q = Quaternion::FromEuler(euler.x, euler.y, euler.z);
+                            break;
+                        case UFBX_ROTATION_ORDER_XZY:
+                            q = Quaternion::FromEuler(euler.x, euler.z, euler.y);
+                            break;
+                        case UFBX_ROTATION_ORDER_YXZ:
+                            q = Quaternion::FromEuler(euler.y, euler.x, euler.z); break;
+                        case UFBX_ROTATION_ORDER_YZX: q = Quaternion::FromEuler(euler.y, euler.z, euler.x);
+                            break;
+                        case UFBX_ROTATION_ORDER_ZXY:
+                            q = Quaternion::FromEuler(euler.z, euler.x, euler.y);
+                            break;
+                        case UFBX_ROTATION_ORDER_ZYX:
+                            q = Quaternion::FromEuler(euler.z, euler.y, euler.x);
+                            break;
+                        default:
+                            q = Quaternion::FromEuler(euler.x, euler.y, euler.z);
+                            break;
+                        }
+
+                        channel.rotations[t] = q;
+                    }
+                });
+
+            // Scale
+            process_prop("Lcl Scaling",
+                [](ufbx_anim_curve* c, float t, float v) { return (float)ufbx_evaluate_curve(c, t, v); },
+                [](ufbx_anim_prop* p) { return p->anim_value->default_value; },
+                [&](NodeAnimationChannel& channel, ufbx_anim_prop* prop, ufbx_node* node)
                 {
                     channel.scales.resize(channel.times.size());
                     channel.translations.resize(channel.times.size(), Vector3(0, 0, 0));
@@ -626,6 +768,11 @@ namespace cl
 
         ProcessNode(data->root_node, Matrix4::Identity());
 
+        // Build node-to-index map for all nodes
+        std::unordered_map<ufbx_node*, int> nodeToIndexMap;
+        for (size_t i = 0; i < data->nodes.count; ++i)
+            nodeToIndexMap[data->nodes.data[i]] = static_cast<int>(i);
+
         for (size_t i = 0; i < data->anim_stacks.count; ++i)
         {
             ufbx_anim_stack* anim = data->anim_stacks.data[i];
@@ -639,12 +786,70 @@ namespace cl
             ufbx_anim* uanim = anim->anim;
             float maxTime = 0.0f;
 
-            // Iterate through joints
-            ProcessAnimationChannels(uanim, nodeToJointMap, clip, maxTime);
+            // Determine animation type by checking which nodes are animated
+            bool hasSkeletalChannels = false;
+            bool hasNodeChannels = false;
+
+            if (uanim)
+            {
+                for (size_t li = 0; li < uanim->layers.count; ++li)
+                {
+                    ufbx_anim_layer* layer = uanim->layers.data[li];
+                    if (!layer)
+                        continue;
+
+                    for (size_t pi = 0; pi < layer->anim_props.count; ++pi)
+                    {
+                        ufbx_anim_prop* prop = &layer->anim_props.data[pi];
+                        if (!prop || !prop->element)
+                            continue;
+
+                        // Check if this is a node element
+                        if (prop->element->type == UFBX_ELEMENT_NODE)
+                        {
+                            ufbx_node* node = (ufbx_node*)prop->element;
+
+                            // Check if it's a joint/bone
+                            if (nodeToJointMap.find(node) != nodeToJointMap.end())
+                            {
+                                hasSkeletalChannels = true;
+                            }
+                            else
+                            {
+                                hasNodeChannels = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Set animation type
+            if (hasSkeletalChannels && !hasNodeChannels)
+                clip->SetAnimationType(AnimationType::Skeletal);
+            else if (!hasSkeletalChannels && hasNodeChannels)
+                clip->SetAnimationType(AnimationType::NodeBased);
+            else if (hasSkeletalChannels && hasNodeChannels)
+            {
+                // Mixed animation. Priortize skeleton
+                clip->SetAnimationType(AnimationType::Skeletal);
+                std::cout << "[WARNING] Animation '" << clip->GetName() << "' has both skeletal and node channels. Using skeletal mode.\n";
+            }
+            else // No valid channels, default to skeletal
+                clip->SetAnimationType(AnimationType::Skeletal);
+
+            // Process channels based on type
+            if (clip->GetAnimationType() == AnimationType::Skeletal)
+            {
+                ProcessSkeletalAnimationChannels(uanim, nodeToJointMap, clip, maxTime);
+            }
+            else // NodeBased
+                ProcessNodeAnimationChannels(uanim, nodeToIndexMap, clip, maxTime);
 
             clip->SetDuration(maxTime);
             model->AddAnimation(clip);
         }
+
+        model->SetNodeCount(static_cast<int>(data->nodes.count));
 
         ufbx_free_scene(data);
         return model;
@@ -695,6 +900,11 @@ namespace cl
             }
         }
 
+        // Build node-to-index map for all nodes
+        std::unordered_map<ufbx_node*, int> nodeToIndexMap;
+        for (size_t i = 0; i < scene->nodes.count; ++i)
+            nodeToIndexMap[scene->nodes.data[i]] = static_cast<int>(i);
+
         ufbx_anim_stack* animStack = scene->anim_stacks.data[animationIndex];
         AnimationClip* clip = new AnimationClip();
         clip->SetName(animStack->name.data ? animStack->name.data : "Animation_" + std::to_string(animationIndex));
@@ -702,8 +912,55 @@ namespace cl
 
         float maxTime = 0.0f;
 
-        // Iterate through joints
-        ProcessAnimationChannels(uanim, nodeToJointMap, clip, maxTime);
+        // Determine animation type
+        bool hasSkeletalChannels = false;
+        bool hasNodeChannels = false;
+
+        if (uanim)
+        {
+            for (size_t li = 0; li < uanim->layers.count; ++li)
+            {
+                ufbx_anim_layer* layer = uanim->layers.data[li];
+                if (!layer)
+                    continue;
+
+                for (size_t pi = 0; pi < layer->anim_props.count; ++pi)
+                {
+                    ufbx_anim_prop* prop = &layer->anim_props.data[pi];
+                    if (!prop || !prop->element)
+                        continue;
+
+                    if (prop->element->type == UFBX_ELEMENT_NODE)
+                    {
+                        ufbx_node* node = (ufbx_node*)prop->element;
+
+                        if (nodeToJointMap.find(node) != nodeToJointMap.end())
+                            hasSkeletalChannels = true;
+                        else
+                            hasNodeChannels = true;
+                    }
+                }
+            }
+        }
+
+        // Set animation type
+        if (hasSkeletalChannels && !hasNodeChannels)
+            clip->SetAnimationType(AnimationType::Skeletal);
+        else if (!hasSkeletalChannels && hasNodeChannels)
+            clip->SetAnimationType(AnimationType::NodeBased);
+        else if (hasSkeletalChannels && hasNodeChannels)
+        {
+            clip->SetAnimationType(AnimationType::Skeletal);
+            std::cout << "[WARNING] Animation '" << clip->GetName() << "' has both skeletal and node channels. Using skeletal mode.\n";
+        }
+        else
+            clip->SetAnimationType(AnimationType::Skeletal);
+
+        // Process channels based on type
+        if (clip->GetAnimationType() == AnimationType::Skeletal)
+            ProcessSkeletalAnimationChannels(uanim, nodeToJointMap, clip, maxTime);
+        else
+            ProcessNodeAnimationChannels(uanim, nodeToIndexMap, clip, maxTime);
 
         clip->SetDuration(maxTime);
         ufbx_free_scene(scene);
@@ -729,6 +986,7 @@ namespace cl
         if (!scene)
             return nullptr;
 
+        // Map joints to bone indices
         std::unordered_map<ufbx_node*, int> nodeToJointMap;
         ufbx_skin_deformer* skin = nullptr;
         for (size_t i = 0; i < scene->meshes.count; ++i)
@@ -750,6 +1008,12 @@ namespace cl
             }
         }
 
+        // Build node-to-index map for all nodes
+        std::unordered_map<ufbx_node*, int> nodeToIndexMap;
+        for (size_t i = 0; i < scene->nodes.count; ++i)
+            nodeToIndexMap[scene->nodes.data[i]] = static_cast<int>(i);
+
+        // Find the animation by name
         ufbx_anim_stack* animStack = nullptr;
         for (size_t i = 0; i < scene->anim_stacks.count; ++i)
         {
@@ -772,8 +1036,55 @@ namespace cl
         ufbx_anim* uanim = animStack->anim;
         float maxTime = 0.0f;
 
-        // Iterate through joints
-        ProcessAnimationChannels(uanim, nodeToJointMap, clip, maxTime);
+        // Determine animation type
+        bool hasSkeletalChannels = false;
+        bool hasNodeChannels = false;
+
+        if (uanim)
+        {
+            for (size_t li = 0; li < uanim->layers.count; ++li)
+            {
+                ufbx_anim_layer* layer = uanim->layers.data[li];
+                if (!layer)
+                    continue;
+
+                for (size_t pi = 0; pi < layer->anim_props.count; ++pi)
+                {
+                    ufbx_anim_prop* prop = &layer->anim_props.data[pi];
+                    if (!prop || !prop->element)
+                        continue;
+
+                    if (prop->element->type == UFBX_ELEMENT_NODE)
+                    {
+                        ufbx_node* node = (ufbx_node*)prop->element;
+
+                        if (nodeToJointMap.find(node) != nodeToJointMap.end())
+                            hasSkeletalChannels = true;
+                        else
+                            hasNodeChannels = true;
+                    }
+                }
+            }
+        }
+
+        // Set animation type
+        if (hasSkeletalChannels && !hasNodeChannels)
+            clip->SetAnimationType(AnimationType::Skeletal);
+        else if (!hasSkeletalChannels && hasNodeChannels)
+            clip->SetAnimationType(AnimationType::NodeBased);
+        else if (hasSkeletalChannels && hasNodeChannels)
+        {
+            clip->SetAnimationType(AnimationType::Skeletal);
+            std::cout << "[WARNING] Animation '" << clip->GetName() << "' has both skeletal and node channels. Using skeletal mode.\n";
+        }
+        else
+            clip->SetAnimationType(AnimationType::Skeletal);
+
+        // Process channels based on type
+        if (clip->GetAnimationType() == AnimationType::Skeletal)
+            ProcessSkeletalAnimationChannels(uanim, nodeToJointMap, clip, maxTime);
+        else
+            ProcessNodeAnimationChannels(uanim, nodeToIndexMap, clip, maxTime);
 
         clip->SetDuration(maxTime);
         ufbx_free_scene(scene);
@@ -798,6 +1109,7 @@ namespace cl
         ufbx_scene* scene = ufbx_load_file(filePath.data(), &options, &error);
         if (!scene) return clips;
 
+        // Map joints to bone indices
         std::unordered_map<ufbx_node*, int> nodeToJointMap;
         ufbx_skin_deformer* skin = nullptr;
         for (size_t i = 0; i < scene->meshes.count; ++i)
@@ -821,6 +1133,11 @@ namespace cl
             }
         }
 
+        // Build node-to-index map for all nodes
+        std::unordered_map<ufbx_node*, int> nodeToIndexMap;
+        for (size_t i = 0; i < scene->nodes.count; ++i)
+            nodeToIndexMap[scene->nodes.data[i]] = static_cast<int>(i);
+
         // Load each anim stack
         for (size_t i = 0; i < scene->anim_stacks.count; ++i)
         {
@@ -828,10 +1145,60 @@ namespace cl
             AnimationClip* clip = new AnimationClip();
             clip->SetName(animStack->name.data ? animStack->name.data : "Animation_" + std::to_string(i));
 
+            ufbx_anim* uanim = animStack->anim;
             float maxTime = 0.0f;
-            ProcessAnimationChannels(animStack->anim, nodeToJointMap, clip, maxTime);
-            clip->SetDuration(maxTime);
 
+            // Determine animation type
+            bool hasSkeletalChannels = false;
+            bool hasNodeChannels = false;
+
+            if (uanim)
+            {
+                for (size_t li = 0; li < uanim->layers.count; ++li)
+                {
+                    ufbx_anim_layer* layer = uanim->layers.data[li];
+                    if (!layer)
+                        continue;
+
+                    for (size_t pi = 0; pi < layer->anim_props.count; ++pi)
+                    {
+                        ufbx_anim_prop* prop = &layer->anim_props.data[pi];
+                        if (!prop || !prop->element)
+                            continue;
+
+                        if (prop->element->type == UFBX_ELEMENT_NODE)
+                        {
+                            ufbx_node* node = (ufbx_node*)prop->element;
+
+                            if (nodeToJointMap.find(node) != nodeToJointMap.end())
+                                hasSkeletalChannels = true;
+                            else
+                                hasNodeChannels = true;
+                        }
+                    }
+                }
+            }
+
+            // Set animation type
+            if (hasSkeletalChannels && !hasNodeChannels)
+                clip->SetAnimationType(AnimationType::Skeletal);
+            else if (!hasSkeletalChannels && hasNodeChannels)
+                clip->SetAnimationType(AnimationType::NodeBased);
+            else if (hasSkeletalChannels && hasNodeChannels)
+            {
+                clip->SetAnimationType(AnimationType::Skeletal);
+                std::cout << "[WARNING] Animation '" << clip->GetName() << "' has both skeletal and node channels. Using skeletal mode.\n";
+            }
+            else
+                clip->SetAnimationType(AnimationType::Skeletal);
+
+            // Process channels based on type
+            if (clip->GetAnimationType() == AnimationType::Skeletal)
+                ProcessSkeletalAnimationChannels(uanim, nodeToJointMap, clip, maxTime);
+            else
+                ProcessNodeAnimationChannels(uanim, nodeToIndexMap, clip, maxTime);
+
+            clip->SetDuration(maxTime);
             clips.push_back(clip);
         }
 

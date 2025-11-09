@@ -86,6 +86,10 @@ namespace cl
         /// This sets every mesh within this model to skinned
         void SetSkinned(bool skinned);
 
+        // Node management for animations
+        void SetNodeCount(int count) { m_nodeCount = count; }
+        int GetNodeCount() const { return m_nodeCount; }
+
     private:
         Material* material;
         std::vector<std::shared_ptr<Mesh>> m_meshes;
@@ -98,6 +102,8 @@ namespace cl
         Skeleton* m_skeleton;
         std::vector<AnimationClip*> m_animations;
         Animator m_animator;
+
+        int m_nodeCount;
 
         void MarkTransformDirty() { m_transformDirty = true; }
     };
