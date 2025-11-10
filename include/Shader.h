@@ -76,7 +76,7 @@ namespace cl
 
         void* LoadShaderFile(std::string_view path) const;
 
-        void* GetOrCreateUniform(std::string_view name, UniformType type, uint16_t num) const;
+        bgfx::UniformHandle GetOrCreateUniform(std::string_view name, UniformType type, uint16_t num) const;
         void SetUniformInternal(std::string_view name, const float v) const;
         void SetUniformInternal(std::string_view name, const int v) const;
         void SetUniformInternal(std::string_view name, const float(&v2)[2]) const;

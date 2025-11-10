@@ -279,28 +279,24 @@ namespace cl
 
     // Internal uniform functions
 
-    void* Shader::GetOrCreateUniform(std::string_view name, UniformType type, uint16_t num) const
+    bgfx::UniformHandle Shader::GetOrCreateUniform(std::string_view name, UniformType type, uint16_t num) const
     {
         if (!m_impl)
-            return nullptr;
+            return BGFX_INVALID_HANDLE;
 
         auto it = m_impl->uniforms.find(name.data());
         if (it != m_impl->uniforms.end())
-        {
-            bgfx::UniformHandle* handle = new bgfx::UniformHandle(it->second);
-            return handle;
-        }
+            return it->second;
 
-        bgfx::UniformHandle h = bgfx::createUniform(name.data(), ToBgfxUniformType(type), num);
+        bgfx::UniformHandle h = bgfx::createUniform(name.data(), ToBgfxUniformType(type), num); // Todo: Is this ever being deleted?
         if (!bgfx::isValid(h))
         {
             std::cerr << "Shader::getOrCreateUniform: failed to create uniform " << name << std::endl;
-            return nullptr;
+            return BGFX_INVALID_HANDLE;
         }
-        m_impl->uniforms[name.data()] = h;
 
-        bgfx::UniformHandle* handle = new bgfx::UniformHandle(h);
-        return handle;
+        m_impl->uniforms[name.data()] = h;
+        return h;
     }
 
     void Shader::SetUniformInternal(std::string_view name, float v) const
@@ -309,14 +305,9 @@ namespace cl
             return;
 
         float tmp[4] = { v, 0.0f, 0.0f, 0.0f };
-        void* hPtr = GetOrCreateUniform(name.data(), UniformType::Vec4, 1);
-        if (hPtr)
-        {
-            bgfx::UniformHandle h = *static_cast<bgfx::UniformHandle*>(hPtr);
-            if (bgfx::isValid(h))
-                bgfx::setUniform(h, tmp);
-            delete static_cast<bgfx::UniformHandle*>(hPtr);
-        }
+        bgfx::UniformHandle h = GetOrCreateUniform(name, UniformType::Vec4, 1);
+        if (bgfx::isValid(h))
+            bgfx::setUniform(h, tmp);
     }
 
     void Shader::SetUniformInternal(std::string_view name, int v) const
@@ -325,74 +316,52 @@ namespace cl
             return;
 
         // Pack int as float in a Vec4 uniform
-        // In shader, you can cast back: int myInt = int(u_intUniform.x);
         float tmp[4] = { static_cast<float>(v), 0.0f, 0.0f, 0.0f };
-        void* hPtr = GetOrCreateUniform(name.data(), UniformType::Vec4, 1);
-        if (hPtr)
-        {
-            bgfx::UniformHandle h = *static_cast<bgfx::UniformHandle*>(hPtr);
-            if (bgfx::isValid(h))
-                bgfx::setUniform(h, tmp);
-            delete static_cast<bgfx::UniformHandle*>(hPtr);
-        }
+        bgfx::UniformHandle h = GetOrCreateUniform(name, UniformType::Vec4, 1);
+        if (bgfx::isValid(h))
+            bgfx::setUniform(h, tmp);
     }
 
     void Shader::SetUniformInternal(std::string_view name, const float(&v2)[2]) const
     {
         if (!m_impl)
             return;
+
         float tmp[4] = { v2[0], v2[1], 0.0f, 0.0f };
-        void* hPtr = GetOrCreateUniform(name.data(), UniformType::Vec4, 1);
-        if (hPtr)
-        {
-            bgfx::UniformHandle h = *static_cast<bgfx::UniformHandle*>(hPtr);
-            if (bgfx::isValid(h))
-                bgfx::setUniform(h, tmp);
-            delete static_cast<bgfx::UniformHandle*>(hPtr);
-        }
+        bgfx::UniformHandle h = GetOrCreateUniform(name, UniformType::Vec4, 1);
+        if (bgfx::isValid(h))
+            bgfx::setUniform(h, tmp);
     }
 
     void Shader::SetUniformInternal(std::string_view name, const float(&v3)[3]) const
     {
         if (!m_impl)
             return;
+
         float tmp[4] = { v3[0], v3[1], v3[2], 0.0f };
-        void* hPtr = GetOrCreateUniform(name.data(), UniformType::Vec4, 1);
-        if (hPtr)
-        {
-            bgfx::UniformHandle h = *static_cast<bgfx::UniformHandle*>(hPtr);
-            if (bgfx::isValid(h))
-                bgfx::setUniform(h, tmp);
-            delete static_cast<bgfx::UniformHandle*>(hPtr);
-        }
+        bgfx::UniformHandle h = GetOrCreateUniform(name, UniformType::Vec4, 1);
+        if (bgfx::isValid(h))
+            bgfx::setUniform(h, tmp);
     }
 
     void Shader::SetUniformInternal(std::string_view name, const float(&v4)[4]) const
     {
         if (!m_impl)
             return;
-        void* hPtr = GetOrCreateUniform(name.data(), UniformType::Vec4, 1);
-        if (hPtr)
-        {
-            bgfx::UniformHandle h = *static_cast<bgfx::UniformHandle*>(hPtr);
-            if (bgfx::isValid(h))
-                bgfx::setUniform(h, v4);
-            delete static_cast<bgfx::UniformHandle*>(hPtr);
-        }
+
+        bgfx::UniformHandle h = GetOrCreateUniform(name, UniformType::Vec4, 1);
+        if (bgfx::isValid(h))
+            bgfx::setUniform(h, v4);
     }
 
     void Shader::SetUniformInternal(std::string_view name, const float(&m4)[16]) const
     {
         if (!m_impl)
             return;
-        void* hPtr = GetOrCreateUniform(name.data(), UniformType::Mat4, 1);
-        if (hPtr)
-        {
-            bgfx::UniformHandle h = *static_cast<bgfx::UniformHandle*>(hPtr);
-            if (bgfx::isValid(h))
-                bgfx::setUniform(h, m4);
-            delete static_cast<bgfx::UniformHandle*>(hPtr);
-        }
+
+        bgfx::UniformHandle h = GetOrCreateUniform(name, UniformType::Mat4, 1);
+        if (bgfx::isValid(h))
+            bgfx::setUniform(h, m4);
     }
 
     void Shader::SetUniformInternal(std::string_view name, const Texture* texture) const
