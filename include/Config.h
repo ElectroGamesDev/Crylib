@@ -29,7 +29,7 @@ namespace cl
         int windowWidth = 800;
         int windowHeight = 600;
         bool windowResizable = true;
-        bool windowVSync = true;
+        bool windowVSync = false;
         bool windowFullscreen = false;
         RenderingAPI renderingAPI = DirectX11;
 
