@@ -186,15 +186,6 @@ namespace cl
         if (!m_impl)
             return;
 
-        if (m_impl)
-        {
-            for (auto& [name, handle] : m_impl->uniforms)
-            {
-                if (bgfx::isValid(handle))
-                    bgfx::destroy(handle);
-            }
-        }
-
         if (bgfx::isValid(m_impl->program))
         {
             bgfx::destroy(m_impl->program);
@@ -250,40 +241,120 @@ namespace cl
 
     void Shader::SetUniform(std::string_view name, float v)
     {
-        m_Uniforms.push_back({ name.data(), UniformType::Vec4, v });
+        auto it = m_UniformIndices.find(name.data());
+        if (it != m_UniformIndices.end())
+        {
+            auto& uniform = m_Uniforms[it->second];
+            uniform.value = v;
+            uniform.type = UniformType::Vec4;
+        }
+        else
+        {
+            m_UniformIndices[name.data()] = m_Uniforms.size();
+            m_Uniforms.push_back({ name.data(), UniformType::Vec4, v });
+        }
     }
 
-
-    void Shader::SetUniform(std::string_view name, const int v)
+    void Shader::SetUniform(std::string_view name, int v)
     {
-        m_Uniforms.push_back({ name.data(), UniformType::Vec4, v });
+        auto it = m_UniformIndices.find(name.data());
+        if (it != m_UniformIndices.end())
+        {
+            auto& uniform = m_Uniforms[it->second];
+            uniform.value = v;
+            uniform.type = UniformType::Vec4;
+        }
+        else
+        {
+            m_UniformIndices[name.data()] = m_Uniforms.size();
+            m_Uniforms.push_back({ name.data(), UniformType::Vec4, v });
+        }
     }
 
     void Shader::SetUniform(std::string_view name, const float(&v2)[2])
     {
-        m_Uniforms.push_back({ name.data(), UniformType::Vec4, std::array<float, 2>{ v2[0], v2[1] } });
+        std::array<float, 2> arr{ v2[0], v2[1] };
+        auto it = m_UniformIndices.find(name.data());
+        if (it != m_UniformIndices.end())
+        {
+            auto& uniform = m_Uniforms[it->second];
+            uniform.value = arr;
+            uniform.type = UniformType::Vec4;
+        }
+        else
+        {
+            m_UniformIndices[name.data()] = m_Uniforms.size();
+            m_Uniforms.push_back({ name.data(), UniformType::Vec4, arr });
+        }
     }
 
     void Shader::SetUniform(std::string_view name, const float(&v3)[3])
     {
-        m_Uniforms.push_back({ name.data(), UniformType::Vec4, std::array<float, 3>{ v3[0], v3[1], v3[2] } });
+        std::array<float, 3> arr{ v3[0], v3[1], v3[2] };
+        auto it = m_UniformIndices.find(name.data());
+        if (it != m_UniformIndices.end())
+        {
+            auto& uniform = m_Uniforms[it->second];
+            uniform.value = arr;
+            uniform.type = UniformType::Vec4;
+        }
+        else
+        {
+            m_UniformIndices[name.data()] = m_Uniforms.size();
+            m_Uniforms.push_back({ name.data(), UniformType::Vec4, arr });
+        }
     }
 
     void Shader::SetUniform(std::string_view name, const float(&v4)[4])
     {
-        m_Uniforms.push_back({ name.data(), UniformType::Vec4, std::array<float, 4>{ v4[0], v4[1], v4[2], v4[3] } });
+        std::array<float, 4> arr{ v4[0], v4[1], v4[2], v4[3] };
+        auto it = m_UniformIndices.find(name.data());
+        if (it != m_UniformIndices.end())
+        {
+            auto& uniform = m_Uniforms[it->second];
+            uniform.value = arr;
+            uniform.type = UniformType::Vec4;
+        }
+        else
+        {
+            m_UniformIndices[name.data()] = m_Uniforms.size();
+            m_Uniforms.push_back({ name.data(), UniformType::Vec4, arr });
+        }
     }
 
     void Shader::SetUniform(std::string_view name, const float(&m4)[16])
     {
         std::array<float, 16> arr;
         std::copy(std::begin(m4), std::end(m4), arr.begin());
-        m_Uniforms.push_back({ name.data(), UniformType::Mat4, arr });
+
+        auto it = m_UniformIndices.find(name.data());
+        if (it != m_UniformIndices.end())
+        {
+            auto& uniform = m_Uniforms[it->second];
+            uniform.value = arr;
+            uniform.type = UniformType::Mat4;
+        }
+        else
+        {
+            m_UniformIndices[name.data()] = m_Uniforms.size();
+            m_Uniforms.push_back({ name.data(), UniformType::Mat4, arr });
+        }
     }
 
     void Shader::SetUniform(std::string_view name, Texture* texture)
     {
-        m_Uniforms.push_back({ name.data(), UniformType::Sampler, texture });
+        auto it = m_UniformIndices.find(name.data());
+        if (it != m_UniformIndices.end())
+        {
+            auto& uniform = m_Uniforms[it->second];
+            uniform.value = texture;
+            uniform.type = UniformType::Sampler;
+        }
+        else
+        {
+            m_UniformIndices[name.data()] = m_Uniforms.size();
+            m_Uniforms.push_back({ name.data(), UniformType::Sampler, texture });
+        }
     }
 
     // Internal uniform functions

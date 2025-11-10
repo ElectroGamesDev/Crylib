@@ -73,6 +73,7 @@ namespace cl
     private:
         ShaderImpl* m_impl;
         std::vector<ShaderUniform> m_Uniforms;
+        std::unordered_map<std::string, size_t> m_UniformIndices;
 
         void* LoadShaderFile(std::string_view path) const;
 
