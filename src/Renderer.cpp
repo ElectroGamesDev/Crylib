@@ -41,7 +41,11 @@ namespace cl
         init.platformData = pd;
         init.resolution.width = s_renderer->width;
         init.resolution.height = s_renderer->height;
-        init.resolution.reset = BGFX_RESET_VSYNC;
+
+        if (config.windowVSync)
+            init.resolution.reset = BGFX_RESET_VSYNC;
+        else
+            init.resolution.reset = BGFX_RESET_NONE;
 
         init.type = bgfx::RendererType::Noop;
 
@@ -73,8 +77,8 @@ namespace cl
         // Create default shader
         //s_renderer->defaultProgram = CreateDefaultShader();
 
-        u_boneMatrices = bgfx::createUniform("u_boneMatrices", bgfx::UniformType::Mat4, 384);
-        u_skinningControl = bgfx::createUniform("u_skinningControl", bgfx::UniformType::Mat4, 384);
+        u_boneMatrices = bgfx::createUniform("u_boneMatrices", bgfx::UniformType::Mat4, 128); // Todo: Make this configurable
+        u_skinningControl = bgfx::createUniform("u_skinningControl", bgfx::UniformType::Vec4);
 
         return true;
     }
@@ -226,7 +230,7 @@ namespace cl
         }
     }
 
-    void DrawMesh(Mesh* mesh, const Matrix4& transform, const std::vector<Matrix4>* bones)
+    void DrawMesh(Mesh* mesh, const Matrix4& transform)
     {
         if (s_renderer->currentViewId == 0 || !mesh || !mesh->IsValid() || !mesh->GetMaterial() || !mesh->GetMaterial()->GetShader())
             return;
@@ -250,7 +254,7 @@ namespace cl
         // In BGFX, uniforms must be set each frame
 
         // Apply global uniforms
-        shader->ApplyUniforms();
+        shader->ApplyUniforms(); // Todo: This should be called once per frame, but then store the changed uniforms so only they are reset.
 
         // Apply material specific uniforms
         material->ApplyShaderUniforms();
@@ -259,16 +263,10 @@ namespace cl
         material->ApplyPBRUniforms();
 
         // Apply skinned and bone uniforms
-        if (bones && mesh->IsSkinned())
+        if (mesh->IsSkinned())
         {
-            const float enabled[4] = { 1.0f, 0.0f, 0.0f, 0.0f };
+            const float enabled[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
             bgfx::setUniform(u_skinningControl, enabled);
-            bgfx::setUniform(u_boneMatrices, bones->data(), (uint16_t)bones->size());
-        }
-        else
-        {
-            const float disabled[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-            bgfx::setUniform(u_skinningControl, disabled);
         }
 
         bgfx::setState(state);
@@ -290,7 +288,7 @@ namespace cl
         Matrix4 transform = Matrix4::Translate(position) * rotQuat.ToMatrix() * Matrix4::Scale(scale);
 
         // Todo: Allow this to be used in batch calls. Potentially use bgfx::setInstanceDataBuffer(). Maybe can create like a Batch class/struct with a DrawBatch() function
-        DrawMesh(mesh, transform, nullptr);
+        DrawMesh(mesh, transform);
     }
 
     void DrawModel(Model* model, const Vector3& position, const Vector3& rotation, const Vector3& scale)
@@ -347,13 +345,16 @@ namespace cl
                     }
                 }
 
-                DrawMesh(mesh.get(), meshTransform, nullptr);
+                DrawMesh(mesh.get(), meshTransform);
             }
         }
         else
         {
+            if (bones)
+                bgfx::setUniform(u_boneMatrices, bones->data(), (uint16_t)bones->size()); // Todo: There may be issues if the bones > max bones set when creating the u_boneMatrices uniform
+
             for (const auto& mesh : model->GetMeshes())
-                DrawMesh(mesh.get(), baseTransform, bones);
+                DrawMesh(mesh.get(), baseTransform);
         }
     }
 
