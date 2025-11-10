@@ -253,11 +253,11 @@ namespace cl
 
         // Uniforms must be set each frame
 
-        //// Apply global uniforms
-        //shader->ApplyUniforms();
+        // Apply global uniforms
+        shader->ApplyUniforms();
 
-        //// Apply material specific uniforms
-        //material->ApplyShaderUniforms();
+        // Apply material specific uniforms
+        material->ApplyShaderUniforms();
 
         // Apply PBR material map uniforms
         material->ApplyPBRUniforms();
