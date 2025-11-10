@@ -186,6 +186,15 @@ namespace cl
         if (!m_impl)
             return;
 
+        if (m_impl)
+        {
+            for (auto& [name, handle] : m_impl->uniforms)
+            {
+                if (bgfx::isValid(handle))
+                    bgfx::destroy(handle);
+            }
+        }
+
         if (bgfx::isValid(m_impl->program))
         {
             bgfx::destroy(m_impl->program);
@@ -288,7 +297,7 @@ namespace cl
         if (it != m_impl->uniforms.end())
             return it->second;
 
-        bgfx::UniformHandle h = bgfx::createUniform(name.data(), ToBgfxUniformType(type), num); // Todo: Is this ever being deleted?
+        bgfx::UniformHandle h = bgfx::createUniform(name.data(), ToBgfxUniformType(type), num);
         if (!bgfx::isValid(h))
         {
             std::cerr << "Shader::getOrCreateUniform: failed to create uniform " << name << std::endl;
