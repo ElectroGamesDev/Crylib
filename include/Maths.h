@@ -167,6 +167,12 @@ namespace cl
         static Color Red() { return Color(255, 0, 0, 255); }
         static Color Green() { return Color(0, 255, 0, 255); }
         static Color Blue() { return Color(0, 0, 255, 255); }
+
+        uint32_t ToUInt32() const { return (r << 24) | (g << 16) | (b << 8) | a; }
+        static Color FromUInt32(uint32_t value)
+        {
+            return Color((value >> 24) & 0xFF, (value >> 16) & 0xFF, (value >> 8) & 0xFF, value & 0xFF);
+        }
     };
 
     // Random numbers
