@@ -10,16 +10,14 @@ namespace cl
     {
         Vector3 position;
         Vector3 normal;
-        Vector3 tangent;
-        Vector3 bitangent;
+        Vector4 tangent; // xyz = tangent direction, w = handedness (+1 or -1)
         Vector2 texCoord;
 
         float boneIndices[4];
         float boneWeights[4];
 
         Vertex()
-            : tangent(0.0f, 0.0f, 0.0f)
-            , bitangent(0.0f, 0.0f, 0.0f)
+            : tangent(0.0f, 0.0f, 0.0f, 1.0f)
             , boneIndices{ 0.0f, 0.0f, 0.0f, 0.0f }
             , boneWeights{ 0.0f, 0.0f, 0.0f, 0.0f }
         {

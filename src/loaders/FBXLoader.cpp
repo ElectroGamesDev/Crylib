@@ -480,16 +480,26 @@ namespace cl
                                     {
                                         ufbx_vec3 tan = ufbx_get_vertex_vec3(&primitive->vertex_tangent, index);
                                         ufbx_vec3 bit = ufbx_get_vertex_vec3(&primitive->vertex_bitangent, index);
+
+                                        Vector3 tangent;
+                                        Vector3 bitangent;
+
                                         if (hasSkin)
                                         {
-                                            v.tangent = Vector3(tan.x, tan.y, tan.z).Normalize();
-                                            v.bitangent = Vector3(bit.x, bit.y, bit.z).Normalize();
+                                            tangent = Vector3(tan.x, tan.y, tan.z).Normalize();
+                                            bitangent = Vector3(bit.x, bit.y, bit.z).Normalize();
                                         }
                                         else
                                         {
-                                            v.tangent = worldTransform.TransformDirection(Vector3(tan.x, tan.y, tan.z)).Normalize();
-                                            v.bitangent = worldTransform.TransformDirection(Vector3(bit.x, bit.y, bit.z)).Normalize();
+                                            tangent = worldTransform.TransformDirection(Vector3(tan.x, tan.y, tan.z)).Normalize();
+                                            bitangent = worldTransform.TransformDirection(Vector3(bit.x, bit.y, bit.z)).Normalize();
                                         }
+
+                                        // Calculate handedness: sign of dot(cross(N, T), B)
+                                        Vector3 cross = Vector3::Cross(v.normal, tangent);
+                                        float handedness = Vector3::Dot(cross, bitangent) > 0.0f ? 1.0f : -1.0f;
+
+                                        v.tangent = Vector4(tangent.x, tangent.y, tangent.z, handedness);
                                     }
 
                                     // UV

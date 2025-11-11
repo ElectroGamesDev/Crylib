@@ -204,18 +204,14 @@ namespace cl
                                 {
                                     float tangent[4];
                                     cgltf_accessor_read_float(accessor, v, tangent, 4);
+
+                                    Vector3 tangentVec;
                                     if (hasSkin)
-                                    {
-                                        vertices[v].tangent = Vector3(tangent[0], tangent[1], tangent[2]).Normalize();
-                                        float sign = tangent[3];
-                                        vertices[v].bitangent = Vector3::Cross(vertices[v].normal, vertices[v].tangent).Normalize() * sign;
-                                    }
+                                        tangentVec = Vector3(tangent[0], tangent[1], tangent[2]).Normalize();
                                     else
-                                    {
-                                        vertices[v].tangent = worldTransform.TransformDirection(Vector3(tangent[0], tangent[1], tangent[2])).Normalize();
-                                        float sign = tangent[3];
-                                        vertices[v].bitangent = Vector3::Cross(vertices[v].normal, vertices[v].tangent).Normalize() * sign;
-                                    }
+                                        tangentVec = worldTransform.TransformDirection(Vector3(tangent[0], tangent[1], tangent[2])).Normalize();
+
+                                    vertices[v].tangent = Vector4(tangentVec.x, tangentVec.y, tangentVec.z, tangent[3]);
                                 }
                             }
                             else if (attribute.type == cgltf_attribute_type_texcoord && attribute.index == 0)

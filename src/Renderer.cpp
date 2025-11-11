@@ -237,9 +237,24 @@ namespace cl
     {
         if (s_renderer->currentViewId == 0 || !mesh || !mesh->IsValid() || !mesh->GetMaterial() || !mesh->GetMaterial()->GetShader())
             return;
-        bgfx::setTransform(transform.m);
+
+        // Allocate instance data buffer for single instance
+        bgfx::InstanceDataBuffer idb;
+        bgfx::allocInstanceDataBuffer(&idb, 1, sizeof(Matrix4));
+
+        if (!bgfx::isValid(idb.handle))
+        {
+            std::cerr << "[ERROR] Failed to allocate instance data buffer for single mesh draw.\n";
+            return;
+        }
+
+        // Copy transform data
+        std::memcpy(idb.data, &transform, sizeof(Matrix4));
+
         bgfx::setVertexBuffer(0, mesh->GetVertexBuffer());
         bgfx::setIndexBuffer(mesh->GetIndexBuffer());
+        bgfx::setInstanceDataBuffer(&idb);
+
         uint64_t state = 0
             | BGFX_STATE_WRITE_RGB
             | BGFX_STATE_WRITE_A
@@ -252,8 +267,6 @@ namespace cl
         Material* material = mesh->GetMaterial();
         Shader* shader = material->GetShader();
 
-        // Uniforms must be set each frame
-        
         // Apply global uniforms
         shader->ApplyUniforms();
 
@@ -266,7 +279,7 @@ namespace cl
         // Apply skinned and bone uniforms
         if (mesh->IsSkinned())
         {
-            const float enabled[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+            const float enabled[4] = { 1.0f, 0.0f, 0.0f, 0.0f };
             bgfx::setUniform(u_IsSkinned, enabled);
         }
 
@@ -388,12 +401,6 @@ namespace cl
             DrawModel(model, model->GetPosition(), model->GetRotationQuat(), model->GetScale());
     }
 
-    void BeginInstancing()
-    {
-        for (auto& pair : s_instanceBatches)
-            pair.second.Clear();
-    }
-
     void DrawMeshInstanced(Mesh* mesh, const std::vector<Matrix4>& transforms, const std::vector<Matrix4>* boneMatrices)
     {
         if (!mesh || !mesh->IsValid() || !mesh->GetMaterial() || !mesh->GetMaterial()->GetShader() || transforms.empty())
@@ -439,8 +446,8 @@ namespace cl
 
             // Apply global uniforms
             shader->ApplyUniforms();
-            // Apply material specific uniforms
 
+            // Apply material specific uniforms
             material->ApplyShaderUniforms();
 
             // Apply PBR material map uniforms
@@ -536,7 +543,7 @@ namespace cl
         DrawModelInstanced(model, model->GetPosition(), model->GetRotationQuat(), model->GetScale());
     }
 
-    void EndInstancing()
+    void SubmitInstances()
     {
         for (auto& pair : s_instanceBatches)
         {
@@ -545,6 +552,7 @@ namespace cl
                 continue;
 
             DrawMeshInstanced(batch.mesh, batch.transforms, batch.boneMatrices);
+            pair.second.Clear();
         }
     }
 

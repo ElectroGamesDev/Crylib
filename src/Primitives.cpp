@@ -33,19 +33,26 @@ namespace cl
             bitangent.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
             bitangent = bitangent.Normalize();
 
-            v0.tangent = v0.tangent + tangent;
-            v1.tangent = v1.tangent + tangent;
-            v2.tangent = v2.tangent + tangent;
-
-            v0.bitangent = v0.bitangent + bitangent;
-            v1.bitangent = v1.bitangent + bitangent;
-            v2.bitangent = v2.bitangent + bitangent;
+            // Accumulate tangent
+            v0.tangent = Vector4(v0.tangent.x + tangent.x, v0.tangent.y + tangent.y, v0.tangent.z + tangent.z, v0.tangent.w);
+            v1.tangent = Vector4(v1.tangent.x + tangent.x, v1.tangent.y + tangent.y, v1.tangent.z + tangent.z, v1.tangent.w);
+            v2.tangent = Vector4(v2.tangent.x + tangent.x, v2.tangent.y + tangent.y, v2.tangent.z + tangent.z, v2.tangent.w);
         }
 
+        // Normalize and calculate handedness
         for (auto& v : vertices)
         {
-            v.tangent = v.tangent.Normalize();
-            v.bitangent = v.bitangent.Normalize();
+            Vector3 tangent = Vector3(v.tangent.x, v.tangent.y, v.tangent.z).Normalize();
+            Vector3 normal = v.normal;
+
+            // Gram-Schmidt orthogonalize
+            tangent = (tangent - normal * Vector3::Dot(normal, tangent)).Normalize();
+
+            // Calculate handedness
+            Vector3 bitangent = Vector3::Cross(normal, tangent);
+            float handedness = 1.0f; // Default to right-handed
+
+            v.tangent = Vector4(tangent.x, tangent.y, tangent.z, handedness);
         }
     }
 

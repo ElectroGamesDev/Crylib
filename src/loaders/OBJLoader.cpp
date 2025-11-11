@@ -485,8 +485,8 @@ namespace cl
                                     //}
 
                                     // default tangent/bitangent
-                                    vert.tangent = { 0, 0, 0 };
-                                    vert.bitangent = { 0, 0, 0 };
+                                    vert.tangent = Vector4(0, 0, 0, 1.0f);  // Default handedness to +1
+
 
                                     // skeletal defaults
                                     for (int bi = 0; bi < 4; ++bi)
@@ -622,9 +622,11 @@ namespace cl
                                 {
                                     Vector3 tangent = (tanAccum[vi] / static_cast<float>(tanCount[vi])).Normalize();
                                     Vector3 normal = vertices[vi].normal;
+
+                                    // Gram-Schmidt orthogonalize
                                     tangent = (tangent - normal * Vector3::Dot(normal, tangent)).Normalize();
-                                    vertices[vi].tangent = tangent;
-                                    vertices[vi].bitangent = Vector3::Cross(normal, tangent).Normalize();
+
+                                    vertices[vi].tangent = Vector4(tangent.x, tangent.y, tangent.z, 1.0f);
                                 }
                             }
                         }

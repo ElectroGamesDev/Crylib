@@ -1,7 +1,5 @@
 #include "Crylib.h"
 #include <iostream>
-// Remove
-#include <bx/math.h>
 
 int main()
 {
@@ -9,6 +7,7 @@ int main()
     config.windowTitle = "Crylib Test Window";
     config.windowWidth = 1280;
     config.windowHeight = 720;
+    config.renderingAPI = cl::DirectX12;
 
     if (!cl::Init(config))
     {
@@ -18,16 +17,18 @@ int main()
 
     cl::LoadDefaultShader("shaders/vs_default.bin", "shaders/fs_default.bin");
 
-    cl::Model* model = cl::LoadModel("models/truck/binary/CesiumMilkTruck.glb");
+    //cl::Model* model = cl::LoadModel("models/truck/binary/CesiumMilkTruck.glb");
+    cl::Model* model = cl::LoadModel("models/gltf/Tree.glb");
     //cl::Model* model = cl::LoadModel("models/Tree.glb"); // Todo: This isnt loading/rendering properly
     //cl::Model* model = cl::LoadModel("models/Tree3.fbx");
     //cl::Model* model = cl::LoadModel("models/Animated Character/Character_anim.fbx");
     //cl::Model* model = cl::LoadModel("models/gltf/Sponza/source/scene.glb");
     //cl::Model* model = cl::LoadModel("models/OBJ/sibenik/sibenik.obj");
 
-    //model->SetPosition({0,-0.5f,0});
-    model->SetRotation({0, 90, 0});
-    //model->SetScale({3,3,3});
+    // Primitives
+    cl::InitPrimitives();
+
+    cl::Model primitive = cl::GenQuadModel();
 
     // Camera
     cl::Camera camera(
@@ -38,9 +39,14 @@ int main()
 
     // Animations
     //model->PlayAnimationByIndex(1);
-    //cl::Model* model = cl::LoadModel("models/AnimatedTriangle/AnimatedTriangle.gltf"); // Todo: Not working
+    //cl::Model* model = cl::LoadModel("models/gltf/AnimatedCube/AnimatedCube.gltf");
+    //cl::Model* model = cl::LoadModel("models/gltf/AnimatedTriangle/AnimatedTriangle.gltf"); // Todo: Not working
     //cl::Model* model = cl::LoadModel("models/Animated Character/Character_anim.fbx"); // Todo: not working
-    //model->PlayAnimationByIndex(0, true);
+    //model->PlayAnimationByName("animation_AnimatedCube", true);
+
+    //model->SetPosition({0,-0.5f,0});
+    model->SetRotation({ 0, 0, 90 });
+    //model->SetScale({3,3,3});
 
     //for (const auto& mesh : model->GetMeshes())
     //{
@@ -55,7 +61,7 @@ int main()
     //player.SetRotation(0.0f, 45.0f, 0.0f);
     //player.SetScale(1.5f);
 
-    //cl::Model* instancedModel = cl::LoadInstance(model);
+    //cl::Model* clonedModel = cl::CloneModel(model);
 
 
     // Lighting:
@@ -118,6 +124,7 @@ int main()
     //static bgfx::UniformHandle u_CamPos = bgfx::createUniform("u_CameraPos", bgfx::UniformType::Vec4);
 
     cl::Clear(cl::Color(48, 48, 48, 255)); // This sets the background color. It can go anywhere after cl:Init() and can be used after camera.Begin() to let multiple cameras have different backgrounds
+    bgfx::setDebug(BGFX_DEBUG_STATS | BGFX_DEBUG_TEXT);
 
     while (!cl::ShouldClose())
     {
@@ -174,16 +181,26 @@ int main()
 
         //model->Rotate(0.0f, deltaTime * 90.0f, 0.0f); // Todo: Add delta time
 
-        cl::DrawModel(model);
+        //cl::DrawModel(model);
 
-        // Drawing instanced models example
+        //cl::DrawModel(&primitive);
+
+        //cl::DrawModel(model, { 0,0,0 }, cl::Quaternion{ 0, 0, 0, 1 }, { 1, 1, 1 });
+
+
+        // Drawing cloned models example
         
         // Option 1. Using transform parameters
         //cl::DrawModel(model, { 3,0,0 }, { 0,0,0 }, {1,1,1});
 
-        // Option 2. Using model instancing / cloned models
-        //cl::DrawModel(instancedModel);
+        // Option 2. Using model cloned models
+        //cl::DrawModel(clonedModel);
 
+        // Instancing example
+        for (int i = 0; i < 1000; i++)
+            cl::DrawModelInstanced(model, { (float)i,0,0 }, cl::Quaternion{ 0, 0, 0, 1 }, { 1, 1, 1 });
+
+        cl::SubmitInstances();
 
         // Shaders
 

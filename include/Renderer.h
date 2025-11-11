@@ -141,9 +141,6 @@ namespace cl
     void DrawModel(Model* model, const Vector3& position, const Vector3& rotation, const Vector3& scale);
     void DrawModel(Model* model);
 
-    /// Begin accumulating instances for the current frame
-    void BeginInstancing();
-
     /// Draws instanced meshes. This is automatically called from EndInstancing();
     void DrawMeshInstanced(Mesh* mesh, const std::vector<Matrix4>& transforms, const std::vector<Matrix4>* boneMatrices = nullptr);
 
@@ -156,8 +153,8 @@ namespace cl
     /// Add a model to the instance batch
     void DrawModelInstanced(Model* model);
 
-    /// Flush all accumulated instances to the GPU
-    void EndInstancing();
+    /// Submit all instances to the GPU
+    void SubmitInstances();
 
     void SetCullMode(bool enabled, bool clockwise = true);
     void SetDepthTest(bool enabled);
