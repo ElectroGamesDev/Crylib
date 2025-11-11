@@ -167,6 +167,11 @@ namespace cl
         MarkProjectionDirty();
     }
 
+    uint16_t Camera2D::GetId()
+    {
+        return m_id;
+    }
+
     void Camera2D::UpdateViewMatrix()
     {
         // Build 2D view matrix
@@ -193,5 +198,10 @@ namespace cl
         m_projectionMatrix.m[13] = 1.0f;
 
         m_projectionDirty = false;
+    }
+
+    void BeginCamera(Camera2D& camera)
+    {
+        camera.Begin();
     }
 }

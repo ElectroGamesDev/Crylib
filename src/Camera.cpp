@@ -382,6 +382,11 @@ namespace cl
         MarkProjectionDirty();
     }
 
+    uint16_t Camera::GetId()
+    {
+        return m_id;
+    }
+
     Vector3 Camera::CalculateForward() const
     {
         if (m_useTarget)
@@ -418,5 +423,10 @@ namespace cl
             m_projectionMatrix = Matrix4::Orthographic(m_orthoSize, m_aspectRatio, m_nearPlane, m_farPlane);
 
         m_projectionDirty = false;
+    }
+
+    void BeginCamera(Camera& camera)
+    {
+        camera.Begin();
     }
 }

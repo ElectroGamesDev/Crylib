@@ -49,6 +49,7 @@ namespace cl
         // Reset
         void Reset();
 
+        uint16_t GetId();
     private:
         Vector2 m_position;
         Vector2 m_offset;
@@ -67,4 +68,6 @@ namespace cl
         void MarkViewDirty() { m_viewDirty = true; }
         void MarkProjectionDirty() { m_projectionDirty = true; }
     };
+
+    void BeginCamera(Camera2D& camera);
 }

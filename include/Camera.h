@@ -102,6 +102,7 @@ namespace cl
         // Reset
         void Reset();
 
+        uint16_t GetId();
     private:
         // Transform
         Vector3 m_position;
@@ -142,4 +143,6 @@ namespace cl
         Vector3 CalculateForward() const;
         Vector3 CalculateRight() const;
     };
+
+    void BeginCamera(Camera& camera);
 }
