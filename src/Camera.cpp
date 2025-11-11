@@ -195,7 +195,6 @@ namespace cl
     void Camera::Move(const Vector3& direction, float distance)
     {
         Vector3 movement = GetForward() * direction.z + GetRight() * direction.x + m_worldUp * direction.y;
-
         m_position += movement.Normalize() * distance;
 
         MarkViewDirty();
@@ -327,14 +326,10 @@ namespace cl
         // Transform world position by view-projection matrix
         Matrix4 viewProj = const_cast<Camera*>(this)->GetViewProjectionMatrix();
 
-        float x = viewProj.m[0] * worldPos.x + viewProj.m[4] * worldPos.y +
-            viewProj.m[8] * worldPos.z + viewProj.m[12];
-        float y = viewProj.m[1] * worldPos.x + viewProj.m[5] * worldPos.y +
-            viewProj.m[9] * worldPos.z + viewProj.m[13];
-        float z = viewProj.m[2] * worldPos.x + viewProj.m[6] * worldPos.y +
-            viewProj.m[10] * worldPos.z + viewProj.m[14];
-        float w = viewProj.m[3] * worldPos.x + viewProj.m[7] * worldPos.y +
-            viewProj.m[11] * worldPos.z + viewProj.m[15];
+        float x = viewProj.m[0] * worldPos.x + viewProj.m[4] * worldPos.y + viewProj.m[8] * worldPos.z + viewProj.m[12];
+        float y = viewProj.m[1] * worldPos.x + viewProj.m[5] * worldPos.y + viewProj.m[9] * worldPos.z + viewProj.m[13];
+        float z = viewProj.m[2] * worldPos.x + viewProj.m[6] * worldPos.y + viewProj.m[10] * worldPos.z + viewProj.m[14];
+        float w = viewProj.m[3] * worldPos.x + viewProj.m[7] * worldPos.y + viewProj.m[11] * worldPos.z + viewProj.m[15];
 
         // Perspective divide
         if (w != 0.0f)
