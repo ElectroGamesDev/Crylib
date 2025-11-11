@@ -7,22 +7,18 @@
 #include <unordered_map>
 #include <memory>
 #include <functional>
+#include <complex>
 
-// Todo: Change all the functions taking in a struct take in a reference
-
-namespace cl {
-
+namespace cl
+{
     // Forward declarations
     struct Sound;
     struct Music;
     struct AudioStream;
 
-    extern std::vector<Sound*> s_sounds; // Used for cl::Shutdown()
-    extern std::vector<Music*> s_musics; // Used for cl::Shutdown()
-    extern std::vector<AudioStream*> s_audioStreams; // Used for cl::Shutdown()
-
     // Audio configuration structure
-    struct AudioConfig {
+    struct AudioConfig
+    {
         unsigned int sampleRate = 48000;
         unsigned int channels = 2;
         ma_format format = ma_format_f32;
@@ -31,7 +27,8 @@ namespace cl {
     };
 
     // 3D Audio listener configuration
-    struct AudioListener {
+    struct AudioListener
+    {
         float positionX = 0.0f;
         float positionY = 0.0f;
         float positionZ = 0.0f;
@@ -50,7 +47,8 @@ namespace cl {
     };
 
     // 3D Audio source configuration
-    struct Audio3DConfig {
+    struct Audio3DConfig
+    {
         float positionX = 0.0f;
         float positionY = 0.0f;
         float positionZ = 0.0f;
@@ -74,7 +72,8 @@ namespace cl {
     };
 
     // Audio effects
-    enum AudioEffect {
+    enum AudioEffect
+    {
         AUDIO_EFFECT_NONE = 0,
         AUDIO_EFFECT_REVERB,
         AUDIO_EFFECT_ECHO,
@@ -88,21 +87,23 @@ namespace cl {
     };
 
     // Sound structure
-    struct Sound {
-        ma_decoder decoder;
+    struct Sound
+    {
         ma_audio_buffer audioBuffer;
+        ma_sound* soundInstance = nullptr; // For spatial/3D sounds
         float* pcmData = nullptr;
-        bool isBuffer = false;
         bool valid = false;
         unsigned int frameCount = 0;
         unsigned int sampleRate = 0;
         unsigned int channels = 0;
+        bool ownsData = false; // Track if we need to delete pcmData
     };
 
     // Music stream structure
-    struct Music {
-        ma_decoder decoder;
+    struct Music
+    {
         ma_sound sound;
+        ma_decoder* decoder = nullptr; // Separate decoder for queries
         bool valid = false;
         bool isPlaying = false;
         bool isPaused = false;
@@ -112,14 +113,16 @@ namespace cl {
         float pitch = 1.0f;
         float pan = 0.5f;
         bool looping = false;
+        std::string filePath; // Store for decoder queries
         std::function<void()> onFinishCallback = nullptr;
     };
 
     // Audio stream for custom PCM data
-    struct AudioStream {
+    struct AudioStream
+    {
+        ma_data_source_base ds;
         ma_pcm_rb buffer;
         ma_sound sound;
-        ma_decoder decoder;
         bool valid = false;
         unsigned int sampleRate = 0;
         unsigned int channels = 0;
@@ -127,15 +130,40 @@ namespace cl {
         unsigned int bufferSizeInFrames = 0;
     };
 
+    // Echo effect parameters
+    struct EchoEffect
+    {
+        std::vector<float> delayBuffer;
+        size_t writePos = 0;
+        unsigned int delaySamples = 0;
+        float feedback = 0.5f;
+        float wetDry = 0.5f;
+    };
+
+    // Reverb effect parameters
+    struct ReverbEffect
+    {
+        std::vector<float> combBuffers[4];
+        size_t combWritePos[4] = { 0, 0, 0, 0 };
+        std::vector<float> allpassBuffers[2];
+        size_t allpassWritePos[2] = { 0, 0 };
+        float roomSize = 0.5f;
+        float damping = 0.5f;
+        float wetDry = 0.3f;
+    };
+
     // Audio processor for effects
-    struct AudioProcessor {
-        ma_lpf lpf;            // Low-pass filter
-        ma_hpf hpf;            // High-pass filter
-        ma_bpf bpf;            // Band-pass filter
-        ma_notch2 notch;       // Notch filter
-        ma_peak2 peak;         // Peaking filter
-        ma_loshelf2 loshelf;   // Low shelf filter
-        ma_hishelf2 hishelf;   // High shelf filter
+    struct AudioProcessor
+    {
+        ma_lpf lpf;
+        ma_hpf hpf;
+        ma_bpf bpf;
+        ma_notch2 notch;
+        ma_peak2 peak;
+        ma_loshelf2 loshelf;
+        ma_hishelf2 hishelf;
+        EchoEffect echo;
+        ReverbEffect reverb;
         AudioEffect activeEffect = AUDIO_EFFECT_NONE;
         bool enabled = false;
     };
@@ -154,62 +182,63 @@ namespace cl {
     bool SetAudioDevice(int index);
 
     // Sound Loading/Unloading
-    Sound LoadSound(std::string_view fileName);
+    Sound LoadSound(const std::string& fileName);
     Sound LoadSoundFromWave(const void* data, unsigned int frameCount, unsigned int sampleRate, unsigned int channels, ma_format format = ma_format_f32);
-    bool IsSoundReady(Sound sound);
-    void UnloadSound(Sound sound);
+    bool IsSoundReady(const Sound& sound);
+    void UnloadSound(Sound& sound);
 
     // Sound Playback
-    void PlaySound(Sound sound);
-    void PlaySoundMulti(Sound sound); // Play without stopping previous instances
-    void StopSound(Sound sound);
-    void PauseSound(Sound sound);
-    void ResumeSound(Sound sound);
-    bool IsSoundPlaying(Sound sound);
+    void PlaySound(const Sound& sound);
+    void PlaySoundMulti(const Sound& sound);
+    void StopSound(const Sound& sound);
+    void PauseSound(const Sound& sound);
+    void ResumeSound(const Sound& sound);
+    bool IsSoundPlaying(const Sound& sound);
 
     // Sound Properties
-    void SetSoundVolume(Sound sound, float volume);
-    void SetSoundPitch(Sound sound, float pitch);
-    void SetSoundPan(Sound sound, float pan);
+    void SetSoundVolume(const Sound& sound, float volume);
+    void SetSoundPitch(const Sound& sound, float pitch);
+    void SetSoundPan(const Sound& sound, float pan);
 
     // Music Loading/Unloading
-    Music LoadMusicStream(std::string_view fileName);
-    bool IsMusicReady(Music music);
-    void UnloadMusicStream(Music music);
+    Music LoadMusicStream(const std::string& fileName);
+    bool IsMusicReady(const Music& music);
+    void UnloadMusicStream(Music& music);
 
     // Music Playback
-    void PlayMusicStream(Music music);
-    void StopMusicStream(Music music);
-    void PauseMusicStream(Music music);
-    void ResumeMusicStream(Music music);
-    void UpdateMusicStream(Music music); // Update streaming buffer
-    bool IsMusicStreamPlaying(Music music);
+    void PlayMusicStream(Music& music);
+    void StopMusicStream(Music& music);
+    void PauseMusicStream(Music& music);
+    void ResumeMusicStream(Music& music);
+    void UpdateMusicStream(Music& music);
+    bool IsMusicStreamPlaying(const Music& music);
 
     // Music Properties
-    void SetMusicVolume(Music music, float volume);
-    void SetMusicPitch(Music music, float pitch);
-    void SetMusicPan(Music music, float pan);
-    void SetMusicLooping(Music music, bool loop);
-    float GetMusicTimeLength(Music music);
-    float GetMusicTimePlayed(Music music);
-    void SeekMusicStream(Music music, float position);
+    void SetMusicVolume(Music& music, float volume);
+    void SetMusicPitch(Music& music, float pitch);
+    void SetMusicPan(Music& music, float pan);
+    void SetMusicLooping(Music& music, bool loop);
+    float GetMusicTimeLength(const Music& music);
+    float GetMusicTimePlayed(const Music& music);
+    void SeekMusicStream(Music& music, float position);
 
     // Music Callbacks
-    void SetMusicFinishedCallback(Music music, std::function<void()> callback);
+    void SetMusicFinishedCallback(Music& music, std::function<void()> callback);
 
     // Audio Stream Functions
-    AudioStream LoadAudioStream(unsigned int sampleRate, unsigned int channels, ma_format format = ma_format_f32);
-    void UnloadAudioStream(AudioStream stream);
-    void UpdateAudioStream(AudioStream stream, const void* data, unsigned int frameCount);
-    bool IsAudioStreamProcessed(AudioStream stream);
-    void PlayAudioStream(AudioStream stream);
-    void PauseAudioStream(AudioStream stream);
-    void ResumeAudioStream(AudioStream stream);
-    bool IsAudioStreamPlaying(AudioStream stream);
-    void StopAudioStream(AudioStream stream);
-    void SetAudioStreamVolume(AudioStream stream, float volume);
-    void SetAudioStreamPitch(AudioStream stream, float pitch);
-    void SetAudioStreamPan(AudioStream stream, float pan);
+    AudioStream LoadAudioStream(unsigned int sampleRate, unsigned int channels,
+        ma_format format = ma_format_f32);
+    void UnloadAudioStream(AudioStream& stream);
+    void UpdateAudioStream(AudioStream& stream, const void* data, unsigned int frameCount);
+    bool IsAudioStreamProcessed(const AudioStream& stream);
+    void PlayAudioStream(AudioStream& stream);
+    void PauseAudioStream(AudioStream& stream);
+    void ResumeAudioStream(AudioStream& stream);
+    bool IsAudioStreamPlaying(const AudioStream& stream);
+    void StopAudioStream(AudioStream& stream);
+    void SetAudioStreamVolume(AudioStream& stream, float volume);
+    void SetAudioStreamPitch(AudioStream& stream, float pitch);
+    void SetAudioStreamPan(AudioStream& stream, float pan);
 
     // 3D Audio Listener
     void SetAudioListenerPosition(float x, float y, float z);
@@ -220,47 +249,47 @@ namespace cl {
     AudioListener GetAudioListener();
 
     // 3D Audio Sound
-    void SetSoundPosition(Sound sound, float x, float y, float z);
-    void SetSoundVelocity(Sound sound, float x, float y, float z);
-    void SetSoundDirection(Sound sound, float x, float y, float z);
-    void SetSoundCone(Sound sound, float innerAngle, float outerAngle, float outerGain);
-    void SetSoundAttenuation(Sound sound, ma_attenuation_model model, float minDistance, float maxDistance, float rolloff);
-    void SetSound3DConfig(Sound sound, const Audio3DConfig& config);
-    void SetSoundSpatialization(Sound sound, bool enable);
-    void SetSoundDopplerFactor(Sound sound, float factor);
-    void SetSoundPositioning(Sound sound, ma_positioning mode);
+    void SetSoundPosition(const Sound& sound, float x, float y, float z);
+    void SetSoundVelocity(const Sound& sound, float x, float y, float z);
+    void SetSoundDirection(const Sound& sound, float x, float y, float z);
+    void SetSoundCone(const Sound& sound, float innerAngle, float outerAngle, float outerGain);
+    void SetSoundAttenuation(const Sound& sound, ma_attenuation_model model, float minDistance, float maxDistance, float rolloff);
+    void SetSound3DConfig(const Sound& sound, const Audio3DConfig& config);
+    void SetSoundSpatialization(const Sound& sound, bool enable);
+    void SetSoundDopplerFactor(const Sound& sound, float factor);
+    void SetSoundPositioning(const Sound& sound, ma_positioning mode);
 
     // 3D Audio Music
-    void SetMusicPosition(Music music, float x, float y, float z);
-    void SetMusicVelocity(Music music, float x, float y, float z);
-    void SetMusicDirection(Music music, float x, float y, float z);
-    void SetMusicCone(Music music, float innerAngle, float outerAngle, float outerGain);
-    void SetMusicAttenuation(Music music, ma_attenuation_model model, float minDistance, float maxDistance, float rolloff);
-    void SetMusic3DConfig(Music music, const Audio3DConfig& config);
-    void SetMusicSpatialization(Music music, bool enable);
-    void SetMusicDopplerFactor(Music music, float factor);
-    void SetMusicPositioning(Music music, ma_positioning mode);
+    void SetMusicPosition(Music& music, float x, float y, float z);
+    void SetMusicVelocity(Music& music, float x, float y, float z);
+    void SetMusicDirection(Music& music, float x, float y, float z);
+    void SetMusicCone(Music& music, float innerAngle, float outerAngle, float outerGain);
+    void SetMusicAttenuation(Music& music, ma_attenuation_model model, float minDistance, float maxDistance, float rolloff);
+    void SetMusic3DConfig(Music& music, const Audio3DConfig& config);
+    void SetMusicSpatialization(Music& music, bool enable);
+    void SetMusicDopplerFactor(Music& music, float factor);
+    void SetMusicPositioning(Music& music, ma_positioning mode);
 
     // Audio Effects Processing
-    void SetSoundEffect(Sound sound, AudioEffect effect, float param1 = 1000.0f, float param2 = 1.0f);
-    void RemoveSoundEffect(Sound sound);
-    void SetMusicEffect(Music music, AudioEffect effect, float param1 = 1000.0f, float param2 = 1.0f);
-    void RemoveMusicEffect(Music music);
+    void SetSoundEffect(const Sound& sound, AudioEffect effect, float param1 = 1000.0f, float param2 = 1.0f);
+    void RemoveSoundEffect(const Sound& sound);
+    void SetMusicEffect(Music& music, AudioEffect effect, float param1 = 1000.0f, float param2 = 1.0f);
+    void RemoveMusicEffect(Music& music);
 
     // Audio Recording
     bool StartAudioRecording(unsigned int sampleRate = 44100, unsigned int channels = 2);
     void StopAudioRecording();
     bool IsRecordingAudio();
     std::vector<float> GetRecordedAudio();
-    void SaveRecordedAudio(std::string_view fileName);
+    void SaveRecordedAudio(const std::string& fileName);
 
     // Waveform Generation
     Sound GenerateSoundWave(int waveType, float frequency, float duration, unsigned int sampleRate = 44100);
-    void UpdateSoundWave(Sound sound, int waveType, float frequency);
+    void UpdateSoundWave(Sound& sound, int waveType, float frequency);
 
     // Audio Analysis
-    float GetSoundVolume(Sound sound);
-    float GetMusicVolume(Music music);
+    float GetSoundVolume(const Sound& sound);
+    float GetMusicVolume(const Music& music);
     std::vector<float> GetAudioSpectrumData(int sampleCount = 512);
 
     // Utility Functions
@@ -268,12 +297,12 @@ namespace cl {
     unsigned int GetAudioFormatSize(ma_format format);
 
     // Wave types for generation
-    enum WaveType {
+    enum WaveType
+    {
         WAVE_SINE = 0,
         WAVE_SQUARE,
         WAVE_TRIANGLE,
         WAVE_SAWTOOTH,
         WAVE_NOISE
     };
-
 }
