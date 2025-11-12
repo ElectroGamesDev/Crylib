@@ -1371,86 +1371,86 @@ namespace cl
 
         switch (effect)
         {
-        case AUDIO_EFFECT_LOWPASS:
-        {
-            ma_lpf_config config = ma_lpf_config_init(format, channels, sampleRate, param1, 2);
-            ma_lpf_init(&config, nullptr, &processor.lpf);
-            break;
-        }
-        case AUDIO_EFFECT_HIGHPASS:
-        {
-            ma_hpf_config config = ma_hpf_config_init(format, channels, sampleRate, param1, 2);
-            ma_hpf_init(&config, nullptr, &processor.hpf);
-            break;
-        }
-        case AUDIO_EFFECT_BANDPASS:
-        {
-            ma_bpf_config config = ma_bpf_config_init(format, channels, sampleRate, param1, 2);
-            ma_bpf_init(&config, nullptr, &processor.bpf);
-            break;
-        }
-        case AUDIO_EFFECT_NOTCH:
-        {
-            ma_notch2_config config = ma_notch2_config_init(format, channels, sampleRate,
-                param1, param2);
-            ma_notch2_init(&config, nullptr, &processor.notch);
-            break;
-        }
-        case AUDIO_EFFECT_PEAKING:
-        {
-            ma_peak2_config config = ma_peak2_config_init(format, channels, sampleRate,
-                param1, 0.707, param2);
-            ma_peak2_init(&config, nullptr, &processor.peak);
-            break;
-        }
-        case AUDIO_EFFECT_LOSHELF:
-        {
-            ma_loshelf2_config config = ma_loshelf2_config_init(format, channels, sampleRate,
-                param1, 0.707, param2);
-            ma_loshelf2_init(&config, nullptr, &processor.loshelf);
-            break;
-        }
-        case AUDIO_EFFECT_HISHELF:
-        {
-            ma_hishelf2_config config = ma_hishelf2_config_init(format, channels, sampleRate,
-                param1, 0.707, param2);
-            ma_hishelf2_init(&config, nullptr, &processor.hishelf);
-            break;
-        }
-        case AUDIO_EFFECT_ECHO:
-        {
-            processor.echo.delaySamples = (unsigned int)(param1 * sampleRate * channels);
-            processor.echo.delayBuffer.resize(processor.echo.delaySamples, 0.0f);
-            processor.echo.writePos = 0;
-            processor.echo.feedback = std::clamp(param2, 0.0f, 0.95f);
-            processor.echo.wetDry = 0.5f;
-            break;
-        }
-        case AUDIO_EFFECT_REVERB:
-        {
-            processor.reverb.roomSize = std::clamp(param1, 0.0f, 1.0f);
-            processor.reverb.damping = std::clamp(param2, 0.0f, 1.0f);
-            processor.reverb.wetDry = 0.3f;
-
-            const int combLengths[4] = { 1116, 1188, 1277, 1356 };
-            for (int i = 0; i < 4; i++)
+            case AUDIO_EFFECT_LOWPASS:
             {
-                int length = (int)(combLengths[i] * processor.reverb.roomSize);
-                processor.reverb.combBuffers[i].resize(length * channels, 0.0f);
-                processor.reverb.combWritePos[i] = 0;
+                ma_lpf_config config = ma_lpf_config_init(format, channels, sampleRate, param1, 2);
+                ma_lpf_init(&config, nullptr, &processor.lpf);
+                break;
             }
-
-            const int allpassLengths[2] = { 556, 441 };
-            for (int i = 0; i < 2; i++)
+            case AUDIO_EFFECT_HIGHPASS:
             {
-                processor.reverb.allpassBuffers[i].resize(allpassLengths[i] * channels, 0.0f);
-                processor.reverb.allpassWritePos[i] = 0;
+                ma_hpf_config config = ma_hpf_config_init(format, channels, sampleRate, param1, 2);
+                ma_hpf_init(&config, nullptr, &processor.hpf);
+                break;
             }
-            break;
-        }
-        default:
-            processor.enabled = false;
-            break;
+            case AUDIO_EFFECT_BANDPASS:
+            {
+                ma_bpf_config config = ma_bpf_config_init(format, channels, sampleRate, param1, 2);
+                ma_bpf_init(&config, nullptr, &processor.bpf);
+                break;
+            }
+            case AUDIO_EFFECT_NOTCH:
+            {
+                ma_notch2_config config = ma_notch2_config_init(format, channels, sampleRate,
+                    param1, param2);
+                ma_notch2_init(&config, nullptr, &processor.notch);
+                break;
+            }
+            case AUDIO_EFFECT_PEAKING:
+            {
+                ma_peak2_config config = ma_peak2_config_init(format, channels, sampleRate,
+                    param1, 0.707, param2);
+                ma_peak2_init(&config, nullptr, &processor.peak);
+                break;
+            }
+            case AUDIO_EFFECT_LOSHELF:
+            {
+                ma_loshelf2_config config = ma_loshelf2_config_init(format, channels, sampleRate,
+                    param1, 0.707, param2);
+                ma_loshelf2_init(&config, nullptr, &processor.loshelf);
+                break;
+            }
+            case AUDIO_EFFECT_HISHELF:
+            {
+                ma_hishelf2_config config = ma_hishelf2_config_init(format, channels, sampleRate,
+                    param1, 0.707, param2);
+                ma_hishelf2_init(&config, nullptr, &processor.hishelf);
+                break;
+            }
+            case AUDIO_EFFECT_ECHO:
+            {
+                processor.echo.delaySamples = (unsigned int)(param1 * sampleRate * channels);
+                processor.echo.delayBuffer.resize(processor.echo.delaySamples, 0.0f);
+                processor.echo.writePos = 0;
+                processor.echo.feedback = std::clamp(param2, 0.0f, 0.95f);
+                processor.echo.wetDry = 0.5f;
+                break;
+            }
+            case AUDIO_EFFECT_REVERB:
+            {
+                processor.reverb.roomSize = std::clamp(param1, 0.0f, 1.0f);
+                processor.reverb.damping = std::clamp(param2, 0.0f, 1.0f);
+                processor.reverb.wetDry = 0.3f;
+
+                const int combLengths[4] = { 1116, 1188, 1277, 1356 };
+                for (int i = 0; i < 4; i++)
+                {
+                    int length = (int)(combLengths[i] * processor.reverb.roomSize);
+                    processor.reverb.combBuffers[i].resize(length * channels, 0.0f);
+                    processor.reverb.combWritePos[i] = 0;
+                }
+
+                const int allpassLengths[2] = { 556, 441 };
+                for (int i = 0; i < 2; i++)
+                {
+                    processor.reverb.allpassBuffers[i].resize(allpassLengths[i] * channels, 0.0f);
+                    processor.reverb.allpassWritePos[i] = 0;
+                }
+                break;
+            }
+            default:
+                processor.enabled = false;
+                break;
         }
     }
 
