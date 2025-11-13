@@ -116,6 +116,8 @@ namespace cl
 
     Vector2 Camera2D::ScreenToWorld(const Vector2& screenPos) const
     {
+        // Todo: This wont work properly with OpenGL
+
         int width = GetViewWidth();
         int height = GetViewHeight();
 
@@ -129,15 +131,14 @@ namespace cl
         Matrix4 viewProj = const_cast<Camera2D*>(this)->GetViewProjectionMatrix();
         Matrix4 invViewProj = viewProj.Inverse();
 
-        // Transform by inverse view-projection
-        float x = invViewProj.m[0] * clipCoords.x + invViewProj.m[4] * clipCoords.y +
-            invViewProj.m[8] * clipCoords.z + invViewProj.m[12] * clipCoords.w;
-        float y = invViewProj.m[1] * clipCoords.x + invViewProj.m[5] * clipCoords.y +
-            invViewProj.m[9] * clipCoords.z + invViewProj.m[13] * clipCoords.w;
-        float w = invViewProj.m[3] * clipCoords.x + invViewProj.m[7] * clipCoords.y +
-            invViewProj.m[11] * clipCoords.z + invViewProj.m[15] * clipCoords.w;
+        // Column-major multiplication
+        float x = clipCoords.x * invViewProj.m[0] + clipCoords.y * invViewProj.m[4] +
+            clipCoords.z * invViewProj.m[8] + clipCoords.w * invViewProj.m[12];
+        float y = clipCoords.x * invViewProj.m[1] + clipCoords.y * invViewProj.m[5] +
+            clipCoords.z * invViewProj.m[9] + clipCoords.w * invViewProj.m[13];
+        float w = clipCoords.x * invViewProj.m[3] + clipCoords.y * invViewProj.m[7] +
+            clipCoords.z * invViewProj.m[11] + clipCoords.w * invViewProj.m[15];
 
-        // Perspective divide
         if (w != 0.0f)
         {
             x /= w;
@@ -149,12 +150,33 @@ namespace cl
 
     Vector2 Camera2D::WorldToScreen(const Vector2& worldPos) const
     {
-        // Transform world position to screen space
-        Vector2 screenPos;
-        screenPos.x = (worldPos.x - m_position.x + m_offset.x) * m_zoom;
-        screenPos.y = (worldPos.y - m_position.y + m_offset.y) * m_zoom;
+        // Todo: This wont work properly with OpenGL
 
-        return screenPos;
+        int width = GetViewWidth();
+        int height = GetViewHeight();
+
+        // Transform world position to normalized device coordinates first
+        Vector4 worldPos4(worldPos.x, worldPos.y, 0.0f, 1.0f);
+        Matrix4 viewProj = const_cast<Camera2D*>(this)->GetViewProjectionMatrix();
+
+        float clipX = worldPos4.x * viewProj.m[0] + worldPos4.y * viewProj.m[4] +
+            worldPos4.z * viewProj.m[8] + worldPos4.w * viewProj.m[12];
+        float clipY = worldPos4.x * viewProj.m[1] + worldPos4.y * viewProj.m[5] +
+            worldPos4.z * viewProj.m[9] + worldPos4.w * viewProj.m[13];
+        float clipW = worldPos4.x * viewProj.m[3] + worldPos4.y * viewProj.m[7] +
+            worldPos4.z * viewProj.m[11] + worldPos4.w * viewProj.m[15];
+
+        if (clipW != 0.0f)
+        {
+            clipX /= clipW;
+            clipY /= clipW;
+        }
+
+        // Convert from NDC (-1 to 1) to screen coordinates
+        float screenX = (clipX + 1.0f) * 0.5f * width;
+        float screenY = (1.0f - clipY) * 0.5f * height;
+
+        return Vector2(screenX, screenY);
     }
 
     void Camera2D::Reset()
@@ -180,7 +202,7 @@ namespace cl
         Matrix4 matScale = Matrix4::Scale(Vector3(m_zoom, m_zoom, 1.0f));
         Matrix4 matTranslation = Matrix4::Translate(Vector3(-m_position.x, -m_position.y, 0.0f));
 
-        m_viewMatrix = matOrigin * matRotation * matScale * matTranslation;
+        m_viewMatrix = matTranslation * matScale * matRotation * matOrigin;
         m_viewDirty = false;
     }
 
@@ -192,7 +214,7 @@ namespace cl
 
         m_projectionMatrix = Matrix4::Identity();
         m_projectionMatrix.m[0] = 2.0f / width;
-        m_projectionMatrix.m[5] = -2.0f / height; // Negative for top-left origin
+        m_projectionMatrix.m[5] = 2.0f / height; // Positive for bottom-left origin
         m_projectionMatrix.m[10] = -1.0f;
         m_projectionMatrix.m[12] = -1.0f;
         m_projectionMatrix.m[13] = 1.0f;

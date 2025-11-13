@@ -202,12 +202,12 @@ namespace cl
 
     void Camera::MoveForward(float distance)
     {
-        Move({ 0.0f, 0.0f, 1.0f }, distance);
+        Move({ 0.0f, 0.0f, -1.0f }, distance);
     }
 
     void Camera::MoveBackward(float distance)
     {
-        Move({ 0.0f, 0.0f, -1.0f }, distance);
+        Move({ 0.0f, 0.0f, 1.0f }, distance);
     }
 
     void Camera::MoveLeft(float distance)
@@ -289,10 +289,10 @@ namespace cl
         int width = GetViewWidth();
         int height = GetViewHeight();
 
-        // Convert screen coordinates to normalized device coordinates (NDC)
+        // Convert screen coordinates to NDC
         float ndcX = (2.0f * screenPos.x) / width - 1.0f;
         float ndcY = 1.0f - (2.0f * screenPos.y) / height;
-        float ndcZ = depth * 2.0f - 1.0f; // depth should be 0-1, convert to -1 to 1
+        float ndcZ = depth; // * 2.0f - 1.0f // Todo: This isnt correct for OpenGL
 
         Vector4 clipCoords(ndcX, ndcY, ndcZ, 1.0f);
 
@@ -323,31 +323,28 @@ namespace cl
 
     Vector2 Camera::WorldToScreen(const Vector3& worldPos) const
     {
-        // Transform world position by view-projection matrix
+        // Todo: This isnt correct for Opengl
         Matrix4 viewProj = const_cast<Camera*>(this)->GetViewProjectionMatrix();
 
+        // Transform to clip space
         float x = viewProj.m[0] * worldPos.x + viewProj.m[4] * worldPos.y + viewProj.m[8] * worldPos.z + viewProj.m[12];
         float y = viewProj.m[1] * worldPos.x + viewProj.m[5] * worldPos.y + viewProj.m[9] * worldPos.z + viewProj.m[13];
-        float z = viewProj.m[2] * worldPos.x + viewProj.m[6] * worldPos.y + viewProj.m[10] * worldPos.z + viewProj.m[14];
         float w = viewProj.m[3] * worldPos.x + viewProj.m[7] * worldPos.y + viewProj.m[11] * worldPos.z + viewProj.m[15];
 
         // Perspective divide
-        if (w != 0.0f)
-        {
-            x /= w;
-            y /= w;
-            z /= w;
-        }
+        float ndcX = x / w;
+        float ndcY = y / w;
 
-        // Convert from NDC (-1 to 1) to screen coordinates
+        // Convert NDC to screen
         int width = GetViewWidth();
         int height = GetViewHeight();
 
-        float screenX = (x + 1.0f) * 0.5f * width;
-        float screenY = (1.0f - y) * 0.5f * height;
+        float screenX = (ndcX + 1.0f) * 0.5f * width;
+        float screenY = (1.0f - ndcY) * 0.5f * height;
 
         return Vector2(screenX, screenY);
     }
+
 
     void Camera::SetDistanceFromTarget(float distance)
     {
@@ -388,15 +385,15 @@ namespace cl
             return (m_target - m_position).Normalize();
         else
         {
-            // Extract forward vector from rotation quaternion
             Matrix4 rotMatrix = m_rotation.ToMatrix();
-            return Vector3(rotMatrix.m[8], rotMatrix.m[9], rotMatrix.m[10]).Normalize();
+            return Vector3(-rotMatrix.m[2], -rotMatrix.m[6], -rotMatrix.m[10]).Normalize();
         }
     }
 
+
     Vector3 Camera::CalculateRight() const
     {
-        return Vector3::Cross(m_worldUp, CalculateForward()).Normalize();
+        return Vector3::Cross(CalculateForward(), m_worldUp).Normalize();
     }
 
     void Camera::UpdateViewMatrix()

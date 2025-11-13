@@ -8,15 +8,16 @@ namespace cl
 
     Matrix4 Matrix4::Perspective(float fov, float aspect, float nearPlane, float farPlane)
     {
+        // Todo: This works for DX and Vukan, but isnt correct for Opengl
+        float tanHalfFov = tanf(fov * 0.5f * (PI / 180.0f));
+
         Matrix4 result;
-        float rad = fov * PI / 180.0f;
-        float tanHalfFov = std::tanf(rad * 0.5f);
 
         result.m[0] = 1.0f / (aspect * tanHalfFov);
-        result.m[5] = 1.0f / tanHalfFov;
-        result.m[10] = -(farPlane + nearPlane) / (farPlane - nearPlane);
-        result.m[11] = -1.0f;
-        result.m[14] = -(2.0f * farPlane * nearPlane) / (farPlane - nearPlane);
+        result.m[5] = 1.0f / (tanHalfFov);
+        result.m[10] = farPlane / (farPlane - nearPlane);
+        result.m[11] = 1.0f;
+        result.m[14] = -(nearPlane * farPlane) / (farPlane - nearPlane);
         result.m[15] = 0.0f;
 
         return result;
@@ -24,29 +25,19 @@ namespace cl
 
     Matrix4 Matrix4::Orthographic(float size, float aspectRatio, float nearPlane, float farPlane)
     {
-        Matrix4 result;
+        // Todo: This works for DX and Vukan, but isnt correct for Opengl
+
+        Matrix4 result = {};
 
         float halfWidth = size * aspectRatio * 0.5f;
         float halfHeight = size * 0.5f;
 
         result.m[0] = 1.0f / halfWidth;
-        result.m[1] = 0.0f;
-        result.m[2] = 0.0f;
-        result.m[3] = 0.0f;
-
-        result.m[4] = 0.0f;
         result.m[5] = 1.0f / halfHeight;
-        result.m[6] = 0.0f;
-        result.m[7] = 0.0f;
-
-        result.m[8] = 0.0f;
-        result.m[9] = 0.0f;
-        result.m[10] = -2.0f / (farPlane - nearPlane);
-        result.m[11] = 0.0f;
-
+        result.m[10] = 1.0f / (farPlane - nearPlane);
         result.m[12] = 0.0f;
         result.m[13] = 0.0f;
-        result.m[14] = -(farPlane + nearPlane) / (farPlane - nearPlane);
+        result.m[14] = -nearPlane / (farPlane - nearPlane);
         result.m[15] = 1.0f;
 
         return result;
@@ -54,92 +45,102 @@ namespace cl
 
     Matrix4 Matrix4::LookAt(const Vector3& eye, const Vector3& target, const Vector3& up)
     {
-        Vector3 zAxis = (eye - target).Normalize();
-        Vector3 xAxis = Vector3::Cross(up, zAxis).Normalize();
-        Vector3 yAxis = Vector3::Cross(zAxis, xAxis);
+        // Todo: This works for DX and Vukan, but isnt correct for Opengl
 
-        Matrix4 result;
-        result.m[0] = xAxis.x;
-        result.m[1] = yAxis.x;
-        result.m[2] = zAxis.x;
+        Vector3 forward = (target - eye).Normalize();
+        Vector3 right = Vector3::Cross(up, forward).Normalize();
+        Vector3 newUp = Vector3::Cross(forward, right);
+
+        Matrix4 result = Matrix4::Identity();
+
+        // Column-major layout
+        result.m[0] = right.x;
+        result.m[1] = right.y;
+        result.m[2] = right.z;
         result.m[3] = 0.0f;
 
-        result.m[4] = xAxis.y;
-        result.m[5] = yAxis.y;
-        result.m[6] = zAxis.y;
+        result.m[4] = newUp.x;
+        result.m[5] = newUp.y;
+        result.m[6] = newUp.z;
         result.m[7] = 0.0f;
 
-        result.m[8] = xAxis.z;
-        result.m[9] = yAxis.z;
-        result.m[10] = zAxis.z;
+        result.m[8] = -forward.x;
+        result.m[9] = -forward.y;
+        result.m[10] = -forward.z;
         result.m[11] = 0.0f;
 
-        result.m[12] = -Vector3::Dot(xAxis, eye);
-        result.m[13] = -Vector3::Dot(yAxis, eye);
-        result.m[14] = -Vector3::Dot(zAxis, eye);
+        result.m[12] = -Vector3::Dot(right, eye);
+        result.m[13] = -Vector3::Dot(newUp, eye);
+        result.m[14] = Vector3::Dot(forward, eye);
         result.m[15] = 1.0f;
 
         return result;
     }
 
+
     Matrix4 Matrix4::Translate(const Vector3& translation)
     {
-        Matrix4 result;
+        Matrix4 result = Identity();
         result.m[12] = translation.x;
         result.m[13] = translation.y;
         result.m[14] = translation.z;
         return result;
     }
 
+    Matrix4 Matrix4::Scale(const Vector3& scale)
+    {
+        Matrix4 result = Identity();
+        result.m[0] = scale.x;
+        result.m[5] = scale.y;
+        result.m[10] = scale.z;
+        return result;
+    }
+
     Matrix4 Matrix4::RotateX(float angle)
     {
-        // Angle in degrees, convert to radians
         float rad = angle * PI / 180.0f;
         float c = cosf(rad);
         float s = sinf(rad);
 
         Matrix4 result = Identity();
         result.m[5] = c;
-        result.m[6] = s;
-        result.m[9] = -s;
+        result.m[6] = -s;
+        result.m[9] = s;
         result.m[10] = c;
         return result;
     }
 
     Matrix4 Matrix4::RotateY(float angle)
     {
-        // Angle in degrees, convert to radians
         float rad = angle * PI / 180.0f;
         float c = cosf(rad);
         float s = sinf(rad);
 
         Matrix4 result = Identity();
         result.m[0] = c;
-        result.m[2] = -s;
-        result.m[8] = s;
+        result.m[2] = s;
+        result.m[8] = -s;
         result.m[10] = c;
         return result;
     }
 
     Matrix4 Matrix4::RotateZ(float angle)
     {
-        // Angle in degrees, convert to radians
         float rad = angle * PI / 180.0f;
         float c = cosf(rad);
         float s = sinf(rad);
 
         Matrix4 result = Identity();
         result.m[0] = c;
-        result.m[1] = s;
-        result.m[4] = -s;
+        result.m[1] = -s;
+        result.m[4] = s;
         result.m[5] = c;
         return result;
     }
 
     Matrix4 Matrix4::RotateYawPitchRoll(float yaw, float pitch, float roll)
     {
-        // Yaw (Y), Pitch (X), Roll (Z) - all in degrees
-        // Combined rotation: Ry * Rx * Rz
+        // Yaw (Y), Pitch (X), Roll (Z). All in degrees
         Matrix4 rotY = RotateY(yaw);
         Matrix4 rotX = RotateX(pitch);
         Matrix4 rotZ = RotateZ(roll);
@@ -178,15 +179,6 @@ namespace cl
         result.m[14] = 0.0f;
         result.m[15] = 1.0f;
 
-        return result;
-    }
-
-    Matrix4 Matrix4::Scale(const Vector3& scale)
-    {
-        Matrix4 result;
-        result.m[0] = scale.x;
-        result.m[5] = scale.y;
-        result.m[10] = scale.z;
         return result;
     }
 

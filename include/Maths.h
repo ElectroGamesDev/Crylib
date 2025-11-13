@@ -118,15 +118,12 @@ namespace cl
         Matrix4()
         {
             for (int i = 0; i < 16; i++)
-                m[i] = 0;
+                m[i] = 0.0f;
 
             m[0] = m[5] = m[10] = m[15] = 1.0f; // Identity
         }
 
-        static Matrix4 Identity()
-        {
-            return Matrix4();
-        }
+        static Matrix4 Identity() { return Matrix4(); }
 
         static Matrix4 Perspective(float fov, float aspect, float nearPlane, float farPlane);
         static Matrix4 Orthographic(float size, float aspectRatio, float nearPlane, float farPlane);
@@ -139,15 +136,13 @@ namespace cl
         static Matrix4 RotateZ(float angle);
         static Matrix4 Scale(const Vector3& scale);
         static Matrix4 FromQuaternion(const Quaternion& q);
+
         Vector3 TransformPoint(const Vector3& v) const;
         Vector3 TransformDirection(const Vector3& v) const;
         Matrix4 Inverse() const;
 
         Matrix4 operator*(const Matrix4& other) const;
-        Matrix4& operator*=(const Matrix4& other) {
-            *this = *this * other;
-            return *this;
-        }
+        Matrix4& operator*=(const Matrix4& other) { *this = *this * other; return *this; }
 
         bool operator==(const Matrix4& other) const
         {

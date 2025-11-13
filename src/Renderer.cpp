@@ -72,10 +72,6 @@ namespace cl
             return false;
         }
 
-        // Set view rectangle
-        //bgfx::setViewRect(0, 0, 0, uint16_t(s_renderer->width), uint16_t(s_renderer->height));
-        //bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x000000ff, 1.0f, 0);
-
         // Todo: Likely remove this and CreateDefautlShader()
         // Create default shader
         //s_renderer->defaultProgram = CreateDefaultShader();
