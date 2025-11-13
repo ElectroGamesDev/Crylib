@@ -80,7 +80,7 @@ namespace cl
         // Create default shader
         //s_renderer->defaultProgram = CreateDefaultShader();
 
-        u_BoneMatrices = bgfx::createUniform("u_BoneMatrices", bgfx::UniformType::Vec4, 128); // This is enough for most models, but to configure it, it would also need to be set in the shader. Also, should we instead be using mat4?
+        u_BoneMatrices = bgfx::createUniform("u_BoneMatrices", bgfx::UniformType::Mat4, 128); // This is enough for most models, but to configure it, it would also need to be set in the shader. Also, should we instead be using mat4?
         u_IsSkinned = bgfx::createUniform("u_IsSkinned", bgfx::UniformType::Vec4);
 
         return true;
@@ -281,11 +281,8 @@ namespace cl
         material->ApplyPBRUniforms();
 
         // Apply skinned and bone uniforms
-        if (mesh->IsSkinned())
-        {
-            const float enabled[4] = { 1.0f, 0.0f, 0.0f, 0.0f };
-            bgfx::setUniform(u_IsSkinned, enabled);
-        }
+        float skinned[4] = { mesh->IsSkinned() ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f };
+        bgfx::setUniform(u_IsSkinned, skinned);
 
         bgfx::setState(state);
         bgfx::submit(s_renderer->currentViewId, shader->GetHandle());
@@ -380,7 +377,17 @@ namespace cl
         else
         {
             if (bones)
-                bgfx::setUniform(u_BoneMatrices, bones->data(), (uint16_t)bones->size()); // Todo: There may be issues if the bones > max bones set when creating the u_boneMatrices uniform
+            {
+                size_t numBones = bones->size();
+                std::vector<float> boneData(numBones * 16);
+                for (size_t i = 0; i < numBones; ++i)
+                {
+                    const Matrix4& mat = (*bones)[i];
+                    memcpy(&boneData[i * 16], mat.m, 16 * sizeof(float));
+                }
+
+                bgfx::setUniform(u_BoneMatrices, boneData.data(), static_cast<uint16_t>(numBones)); // Todo: There may be issues if the bones > max bones set when creating the u_boneMatrices uniform
+            }
             for (const auto& mesh : model->GetMeshes())
                 DrawMesh(mesh.get(), baseTransform);
         }
@@ -460,13 +467,20 @@ namespace cl
             material->ApplyPBRUniforms();
 
             // Bone matrices
-            if (mesh->IsSkinned())
-            {
-                float enabled[4] = { boneMatrices ? 1.0f : 0.0f, 0, 0, 0 };
-                bgfx::setUniform(u_IsSkinned, enabled);
+            float skinned[4] = { mesh->IsSkinned() ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f };
+            bgfx::setUniform(u_IsSkinned, skinned);
 
-                if (boneMatrices)
-                    bgfx::setUniform(u_BoneMatrices, boneMatrices->data(), (uint16_t)boneMatrices->size());
+            if (mesh->IsSkinned() && boneMatrices)
+            {
+                size_t numBones = boneMatrices->size();
+                std::vector<float> boneData(numBones * 16);
+                for (size_t i = 0; i < numBones; ++i)
+                {
+                    const Matrix4& mat = (*boneMatrices)[i];
+                    memcpy(&boneData[i * 16], mat.m, 16 * sizeof(float));
+                }
+
+                bgfx::setUniform(u_BoneMatrices, boneData.data(), static_cast<uint16_t>(numBones));
             }
 
             bgfx::setState(state);

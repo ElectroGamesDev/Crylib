@@ -180,7 +180,7 @@ namespace cl
         Animator();
         ~Animator();
 
-        void SetSkeleton(Skeleton* skeleton) { m_skeleton = skeleton; }
+        void SetSkeleton(Skeleton* skeleton);
         Skeleton* GetSkeleton() const { return m_skeleton; }
 
         void PlayAnimation(AnimationClip* clip, bool loop = true);
@@ -198,6 +198,9 @@ namespace cl
 
         bool IsPlaying() const { return m_playing && !m_paused; }
         bool IsPaused() const { return m_paused; }
+
+        void SetLooping(bool loop) { m_loop = loop; }
+        bool IsLooping() const { return m_loop; }
 
         const std::vector<Matrix4>& GetBoneMatrices() const { return m_boneMatrices; }
 

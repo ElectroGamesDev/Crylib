@@ -34,9 +34,8 @@ namespace cl
         if (node->has_matrix)
         {
             Matrix4 mat;
-            for (int row = 0; row < 4; ++row)
-                for (int col = 0; col < 4; ++col)
-                    mat.m[col * 4 + row] = node->matrix[row * 4 + col];
+            for (int i = 0; i < 16; ++i)
+                mat.m[i] = node->matrix[i];
 
             translation = Vector3(mat.m[12], mat.m[13], mat.m[14]);
 
@@ -46,9 +45,27 @@ namespace cl
             scale = Vector3(scaleX.Length(), scaleY.Length(), scaleZ.Length());
 
             Matrix4 rotMat = mat;
-            if (scale.x != 0.0f) { rotMat.m[0] /= scale.x; rotMat.m[1] /= scale.x; rotMat.m[2] /= scale.x; }
-            if (scale.y != 0.0f) { rotMat.m[4] /= scale.y; rotMat.m[5] /= scale.y; rotMat.m[6] /= scale.y; }
-            if (scale.z != 0.0f) { rotMat.m[8] /= scale.z; rotMat.m[9] /= scale.z; rotMat.m[10] /= scale.z; }
+
+            if (scale.x != 0.0f)
+            {
+                rotMat.m[0] /= scale.x;
+                rotMat.m[1] /= scale.x;
+                rotMat.m[2] /= scale.x;
+            }
+
+            if (scale.y != 0.0f)
+            {
+                rotMat.m[4] /= scale.y;
+                rotMat.m[5] /= scale.y;
+                rotMat.m[6] /= scale.y;
+            }
+
+            if (scale.z != 0.0f)
+            {
+                rotMat.m[8] /= scale.z;
+                rotMat.m[9] /= scale.z;
+                rotMat.m[10] /= scale.z;
+            }
 
             rotation = Quaternion::FromMatrix(rotMat);
         }
@@ -65,14 +82,7 @@ namespace cl
         std::vector<Vertex>& vertices, std::vector<uint32_t>& indices)
     {
         cgltf_draco_mesh_compression* dracoCompression = nullptr;
-        //for (size_t i = 0; i < primitive.extensions_count; ++i)
-        //{
-        //    if (strcmp(primitive.extensions[i].name, "KHR_draco_mesh_compression") == 0)
-        //    {
-        //        dracoCompression = &primitive.extensions[i].data.draco_mesh_compression;
-        //        break;
-        //    }
-        //}
+
         if (primitive.has_draco_mesh_compression)
             dracoCompression = &primitive.draco_mesh_compression;
         else
@@ -102,15 +112,13 @@ namespace cl
 
         for (size_t i = 0; i < dracoCompression->attributes_count; ++i)
         {
-            // NEW: Correctly match the Draco attribute to the glTF primitive attribute by type + semantic index
             cgltf_attribute_type draco_type = dracoCompression->attributes[i].type;
             int draco_sem_index = dracoCompression->attributes[i].index;
 
             int attr_index = -1;
             for (size_t k = 0; k < primitive.attributes_count; ++k)
             {
-                if (primitive.attributes[k].type == draco_type &&
-                    primitive.attributes[k].index == draco_sem_index)
+                if (primitive.attributes[k].type == draco_type && primitive.attributes[k].index == draco_sem_index)
                 {
                     attr_index = static_cast<int>(k);
                     break;
@@ -305,11 +313,10 @@ namespace cl
                 {
                     float mat[16];
                     cgltf_accessor_read_float(accessor, i, mat, 16);
-
                     Matrix4& invBind = skeleton->bones[i].inverseBindMatrix;
-                    for (int row = 0; row < 4; ++row)
-                        for (int col = 0; col < 4; ++col)
-                            invBind.m[col * 4 + row] = mat[row * 4 + col];
+
+                    for (int j = 0; j < 16; ++j)
+                        invBind.m[j] = mat[j];
                 }
             }
 
