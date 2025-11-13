@@ -208,6 +208,7 @@ namespace cl
             return;
 
         // We're not using SetUniformInternal() here because unordered_map lookups can get expensive when doing it tens of thousands of times each frame.
+        // Todo: "u_MaterialFlags2" is set currently being set as a SetShaderParam() which should be changed.
 
         // Todo: This map code needs to be optimized
 

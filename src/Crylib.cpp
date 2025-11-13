@@ -5,6 +5,7 @@
 #include <chrono>
 #include <thread>
 #include <iostream>
+#include "basis universal/basisu_transcoder.h"
 
 namespace cl
 {
@@ -92,6 +93,9 @@ namespace cl
 
         // Set random seed
         RandomizeSeed();
+
+        // Initialize Basis Transcoder
+        basist::basisu_transcoder_init();
 
         // Initialize primitives
         //InitPrimitives(); // The default shader isn't created yet

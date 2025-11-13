@@ -10,6 +10,8 @@
     #define PLATFORM_MACOS
 #endif
 
+#define DRACO_SUPPORTED
+
 namespace cl
 {
     enum RenderingAPI

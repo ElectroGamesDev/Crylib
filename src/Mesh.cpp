@@ -73,6 +73,7 @@ namespace cl
             .add(bgfx::Attrib::Normal, 3, bgfx::AttribType::Float)
             .add(bgfx::Attrib::Tangent, 4, bgfx::AttribType::Float)
             .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
+            .add(bgfx::Attrib::TexCoord1, 2, bgfx::AttribType::Float)
             .add(bgfx::Attrib::Indices, 4, bgfx::AttribType::Float)
             .add(bgfx::Attrib::Weight, 4, bgfx::AttribType::Float)
             .end();
@@ -114,6 +115,28 @@ namespace cl
                 s_meshes.pop_back();
                 return;
             }
+        }
+    }
+
+    void Mesh::ApplyMorphTargets()
+    {
+        if (m_morphTargets.empty())
+            return;
+
+        for (size_t i = 0; i < m_vertices.size(); ++i)
+        {
+            Vector3 morphedPos = m_vertices[i].position;
+            Vector3 morphedNormal = m_vertices[i].normal;
+
+            for (size_t t = 0; t < m_morphTargets.size(); ++t)
+            {
+                float weight = m_morphWeights[t];
+                morphedPos += m_morphTargets[t].positionDeltas[i] * weight;
+                morphedNormal += m_morphTargets[t].normalDeltas[i] * weight;
+            }
+
+            m_vertices[i].position = morphedPos;
+            m_vertices[i].normal = morphedNormal.Normalize();
         }
     }
 

@@ -456,7 +456,7 @@ namespace cl
 
     void Model::UpdateAnimation(float deltaTime)
     {
-        m_animator.Update(deltaTime);
+        m_animator.Update(deltaTime, m_meshes);
     }
 
     void Model::SetSkinned(bool skinned)

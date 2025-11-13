@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include "Mesh.h"
 
 namespace cl
 {
@@ -84,6 +85,14 @@ namespace cl
         std::vector<Vector3> scales;
         AnimationInterpolation interpolation;
 
+        // Cubic spline interpolation
+        std::vector<Vector3> inTangents;
+        std::vector<Vector3> outTangents;
+        std::vector<Vector3> inTangentsScale;
+        std::vector<Vector3> outTangentsScale;
+        std::vector<Quaternion> inTangentsQuat;
+        std::vector<Quaternion> outTangentsQuat;
+
         NodeAnimationChannel() : targetNodeIndex(-1), interpolation(AnimationInterpolation::Linear) {}
     };
 
@@ -96,8 +105,27 @@ namespace cl
         std::vector<Vector3> scales;
         AnimationInterpolation interpolation;
 
+        // Cubic spline iterpolation
+        std::vector<Vector3> inTangents;
+        std::vector<Vector3> outTangents;
+        std::vector<Vector3> inTangentsScale;
+        std::vector<Vector3> outTangentsScale;
+        std::vector<Quaternion> inTangentsQuat;
+        std::vector<Quaternion> outTangentsQuat;
+
         AnimationChannel() : targetBoneIndex(-1), interpolation(AnimationInterpolation::Linear) {}
     };
+
+    struct MorphWeightChannel
+    {
+        int targetNodeIndex;
+        std::vector<float> times;
+        std::vector<std::vector<float>> weights; // [keyframe][target_index]
+        AnimationInterpolation interpolation;
+
+        MorphWeightChannel() : targetNodeIndex(-1), interpolation(AnimationInterpolation::Linear) {}
+    };
+
 
     enum class AnimationType
     {
@@ -132,6 +160,9 @@ namespace cl
         void SetAnimationType(AnimationType type) { m_animationType = type; }
         AnimationType GetAnimationType() const { return m_animationType; }
 
+        void AddMorphWeightChannel(const MorphWeightChannel& channel) { m_morphWeightChannels.push_back(channel); }
+        const std::vector<MorphWeightChannel>& GetMorphWeightChannels() const { return m_morphWeightChannels; }
+
         void Destroy();
 
     private:
@@ -139,6 +170,7 @@ namespace cl
         float m_duration;
         std::vector<AnimationChannel> m_channels;
         std::vector<NodeAnimationChannel> m_nodeChannels;
+        std::vector<MorphWeightChannel> m_morphWeightChannels;
         AnimationType m_animationType = AnimationType::Skeletal;
     };
 
@@ -156,7 +188,7 @@ namespace cl
         void PauseAnimation();
         void ResumeAnimation();
 
-        void Update(float deltaTime);
+        void Update(float deltaTime, std::vector<std::shared_ptr<Mesh>>& meshes);
 
         void SetSpeed(float speed) { m_speed = speed; }
         float GetSpeed() const { return m_speed; }
@@ -191,6 +223,7 @@ namespace cl
         void CalculateBoneTransforms();
         void SampleAnimation(float time);
         void SampleNodeAnimation(float time);
+        void SampleMorphWeights(float time, std::vector<std::shared_ptr<Mesh>>& meshes);
         Vector3 InterpolateTranslation(const AnimationChannel& channel, float time) const;
         Quaternion InterpolateRotation(const AnimationChannel& channel, float time) const;
         Vector3 InterpolateScale(const AnimationChannel& channel, float time) const;

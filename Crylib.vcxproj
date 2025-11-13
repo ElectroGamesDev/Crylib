@@ -72,19 +72,19 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>$(SolutionDir)include;$(SolutionDir)third_party\bgfx\include;$(SolutionDir)third_party\bgfx\include\c99;$(SolutionDir)third_party\bimg\include;$(SolutionDir)third_party\bx\include\inline;$(SolutionDir)third_party\cgltf\include;$(SolutionDir)third_party\compat\include;$(SolutionDir)third_party\glfw\include;$(SolutionDir)third_party\stb_image\include;$(SolutionDir)third_party;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)third_party\bgfx\lib;$(SolutionDir)third_party\bimg\lib;$(SolutionDir)third_party\bx\lib;$(SolutionDir)third_party\glfw\lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)third_party\bgfx\lib;$(SolutionDir)third_party\bimg\lib;$(SolutionDir)third_party\bx\lib;$(SolutionDir)third_party\glfw\lib;$(SolutionDir)third_party\draco\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(SolutionDir)include;$(SolutionDir)third_party\bgfx\include;$(SolutionDir)third_party\bgfx\include\c99;$(SolutionDir)third_party\bimg\include;$(SolutionDir)third_party\bx\include\inline;$(SolutionDir)third_party\cgltf\include;$(SolutionDir)third_party\compat\include;$(SolutionDir)third_party\glfw\include;$(SolutionDir)third_party\stb_image\include;$(SolutionDir)third_party;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)third_party\bgfx\lib;$(SolutionDir)third_party\bimg\lib;$(SolutionDir)third_party\bx\lib;$(SolutionDir)third_party\glfw\lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)third_party\bgfx\lib;$(SolutionDir)third_party\bimg\lib;$(SolutionDir)third_party\bx\lib;$(SolutionDir)third_party\glfw\lib;$(SolutionDir)third_party\draco\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(SolutionDir)include;$(SolutionDir)third_party\bgfx\include;$(SolutionDir)third_party\bgfx\include\c99;$(SolutionDir)third_party\bimg\include;$(SolutionDir)third_party\bx\include\inline;$(SolutionDir)third_party\cgltf\include;$(SolutionDir)third_party\compat\include;$(SolutionDir)third_party\glfw\include;$(SolutionDir)third_party\stb_image\include;$(SolutionDir)third_party;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)third_party\bgfx\lib;$(SolutionDir)third_party\bimg\lib;$(SolutionDir)third_party\bx\lib;$(SolutionDir)third_party\glfw\lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)third_party\bgfx\lib;$(SolutionDir)third_party\bimg\lib;$(SolutionDir)third_party\bx\lib;$(SolutionDir)third_party\glfw\lib;$(SolutionDir)third_party\draco\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(SolutionDir)include;$(SolutionDir)third_party\bgfx\include;$(SolutionDir)third_party\bgfx\include\c99;$(SolutionDir)third_party\bimg\include;$(SolutionDir)third_party\bx\include\inline;$(SolutionDir)third_party\cgltf\include;$(SolutionDir)third_party\compat\include;$(SolutionDir)third_party\glfw\include;$(SolutionDir)third_party\stb_image\include;$(SolutionDir)third_party;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)third_party\bgfx\lib;$(SolutionDir)third_party\bimg\lib;$(SolutionDir)third_party\bx\lib;$(SolutionDir)third_party\glfw\lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)third_party\bgfx\lib;$(SolutionDir)third_party\bimg\lib;$(SolutionDir)third_party\bx\lib;$(SolutionDir)third_party\glfw\lib;$(SolutionDir)third_party\draco\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -94,11 +94,12 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/Zc:__cplusplus /Zc:preprocessor %(AdditionalOptions)</AdditionalOptions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>bgfxDebug.lib;bimgDebug.lib;bimg_decodeDebug.lib;bxDebug.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>bgfxDebug.lib;bimgDebug.lib;bimg_decodeDebug.lib;bxDebug.lib;glfw3.lib;draco.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -111,11 +112,12 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/Zc:__cplusplus /Zc:preprocessor %(AdditionalOptions)</AdditionalOptions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>bgfxDebug.lib;bimgDebug.lib;bimg_decodeDebug.lib;bxDebug.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>bgfxDebug.lib;bimgDebug.lib;bimg_decodeDebug.lib;bxDebug.lib;glfw3.lib;draco.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -126,11 +128,12 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/Zc:__cplusplus /Zc:preprocessor %(AdditionalOptions)</AdditionalOptions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>bgfxDebug.lib;bimgDebug.lib;bimg_decodeDebug.lib;bxDebug.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>bgfxDebug.lib;bimgDebug.lib;bimg_decodeDebug.lib;bxDebug.lib;glfw3.lib;draco.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -143,11 +146,12 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/Zc:__cplusplus /Zc:preprocessor %(AdditionalOptions)</AdditionalOptions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>bgfxDebug.lib;bimgDebug.lib;bimg_decodeDebug.lib;bxDebug.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>bgfxDebug.lib;bimgDebug.lib;bimg_decodeDebug.lib;bxDebug.lib;glfw3.lib;draco.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

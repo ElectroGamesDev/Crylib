@@ -111,7 +111,7 @@ namespace cl
         if (!s_renderer)
             return;
 
-        Texture::ProcessPendingReadbacks(s_renderer->currentFrame);
+        //Texture::ProcessPendingReadbacks(s_renderer->currentFrame);
 
         s_renderer->frameStartTime = std::chrono::steady_clock::now();
         s_renderer->drawStats = DrawStats();
@@ -252,6 +252,8 @@ namespace cl
 
         // Copy transform data
         std::memcpy(idb.data, &transform, sizeof(Matrix4));
+
+        mesh->ApplyMorphTargets(); // Todo: It would be best to blend weights in the shader
 
         bgfx::setVertexBuffer(0, mesh->GetVertexBuffer());
         bgfx::setIndexBuffer(mesh->GetIndexBuffer());
@@ -407,6 +409,8 @@ namespace cl
     {
         if (!mesh || !mesh->IsValid() || !mesh->GetMaterial() || !mesh->GetMaterial()->GetShader() || transforms.empty())
             return;
+
+        mesh->ApplyMorphTargets(); // Todo: It would be best to blend weights in the shader
 
         Material* material = mesh->GetMaterial();
         Shader* shader = material->GetShader();

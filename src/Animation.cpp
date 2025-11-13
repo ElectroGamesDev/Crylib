@@ -33,6 +33,8 @@ namespace cl
         : m_name(std::move(other.m_name))
         , m_duration(other.m_duration)
         , m_channels(std::move(other.m_channels))
+        , m_nodeChannels(std::move(other.m_nodeChannels))
+        , m_morphWeightChannels(std::move(other.m_morphWeightChannels))
     {
         other.m_duration = 0.0f;
         s_clips.push_back(this);
@@ -46,6 +48,8 @@ namespace cl
             m_name = std::move(other.m_name);
             m_duration = other.m_duration;
             m_channels = std::move(other.m_channels);
+            m_nodeChannels = std::move(other.m_nodeChannels);
+            m_morphWeightChannels = std::move(other.m_morphWeightChannels);
             other.m_duration = 0.0f;
         }
         return *this;
@@ -54,6 +58,8 @@ namespace cl
     void AnimationClip::Destroy()
     {
         m_channels.clear();
+        m_nodeChannels.clear();
+        m_morphWeightChannels.clear();
         m_duration = 0.0f;
     }
 
@@ -137,7 +143,7 @@ namespace cl
         m_paused = false;
     }
 
-    void Animator::Update(float deltaTime)
+    void Animator::Update(float deltaTime, std::vector<std::shared_ptr<Mesh>>& meshes)
     {
         if (!m_playing || m_paused || !m_currentClip)
             return;
@@ -172,6 +178,8 @@ namespace cl
         }
         else
             SampleNodeAnimation(m_currentTime);
+
+        SampleMorphWeights(m_currentTime, meshes);
     }
 
 
@@ -251,6 +259,59 @@ namespace cl
         }
     }
 
+    void Animator::SampleMorphWeights(float time, std::vector<std::shared_ptr<Mesh>>& meshes)
+    {
+        if (!m_currentClip)
+            return;
+
+        const auto& morphChannels = m_currentClip->GetMorphWeightChannels();
+        if (morphChannels.empty())
+            return;
+
+        for (const auto& channel : morphChannels)
+        {
+            if (channel.weights.empty() || channel.times.empty())
+                continue;
+
+            int index = FindKeyframeIndex(channel.times, time);
+            int nextIndex = index + 1;
+
+            float factor = 0.0f;
+            if (nextIndex < static_cast<int>(channel.times.size()))
+            {
+                float t0 = channel.times[index];
+                float t1 = channel.times[nextIndex];
+                factor = (time - t0) / (t1 - t0);
+            }
+
+            // Determine interpolated weights for this keyframe
+            std::vector<float> interpolatedWeights(channel.weights[index].size());
+
+            for (size_t w = 0; w < interpolatedWeights.size(); ++w)
+            {
+                float w0 = channel.weights[index][w];
+                float w1 = (nextIndex < static_cast<int>(channel.weights.size())) ? channel.weights[nextIndex][w] : w0;
+
+                if (channel.interpolation == AnimationInterpolation::Step)
+                    interpolatedWeights[w] = w0;
+                else
+                    interpolatedWeights[w] = w0 + (w1 - w0) * factor;
+            }
+
+            // Apply to the target mesh
+            if (channel.targetNodeIndex >= 0 && channel.targetNodeIndex < static_cast<int>(m_nodeTransforms.size()))
+            {
+                if (meshes.size() < channel.targetNodeIndex)
+                {
+                    std::cout << "[WARNING] Failed to apply morph weight during animation." << std::endl;
+                    continue;
+                }
+
+                meshes[channel.targetNodeIndex]->SetMorphWeights(interpolatedWeights);
+            }
+        }
+    }
+
     Matrix4 Animator::GetNodeTransform(int nodeIndex) const
     {
         // Check if this node has an animated transform
@@ -258,7 +319,7 @@ namespace cl
         if (it != m_animatedNodeTransforms.end())
             return it->second;
 
-        // Check the vector storage
+        // Check the vector
         if (nodeIndex >= 0 && nodeIndex < static_cast<int>(m_nodeTransforms.size()))
             return m_nodeTransforms[nodeIndex];
 
@@ -398,16 +459,30 @@ namespace cl
 
         float t0 = channel.times[index];
         float t1 = channel.times[index + 1];
-        float factor = (time - t0) / (t1 - t0);
+        float dt = t1 - t0;
+        float s = (time - t0) / dt;
+        const Vector3& p0 = channel.translations[index];
+        const Vector3& p1 = channel.translations[index + 1];
 
-        const Vector3& v0 = channel.translations[index];
-        const Vector3& v1 = channel.translations[index + 1];
+        if (channel.interpolation == AnimationInterpolation::CubicSpline)
+        {
+            if (channel.outTangents.empty() || channel.inTangents.empty())
+                return p0 + (p1 - p0) * s;
 
-        return Vector3(
-            v0.x + (v1.x - v0.x) * factor,
-            v0.y + (v1.y - v0.y) * factor,
-            v0.z + (v1.z - v0.z) * factor
-        );
+            const Vector3& a0 = channel.outTangents[index];
+            const Vector3& b1 = channel.inTangents[index + 1];
+
+            float s2 = s * s;
+            float s3 = s2 * s;
+            float h00 = 2 * s3 - 3 * s2 + 1;
+            float h10 = s3 - 2 * s2 + s;
+            float h01 = -2 * s3 + 3 * s2;
+            float h11 = s3 - s2;
+
+            return p0 * h00 + (a0 * dt) * h10 + p1 * h01 + (b1 * dt) * h11;
+        }
+        else
+            return p0 + (p1 - p0) * s;
     }
 
     Quaternion Animator::InterpolateRotation(const AnimationChannel& channel, float time) const
@@ -419,7 +494,6 @@ namespace cl
             return channel.rotations[0];
 
         int index = FindKeyframeIndex(channel.times, time);
-
         if (index < 0)
             return channel.rotations[0];
 
@@ -431,9 +505,32 @@ namespace cl
 
         float t0 = channel.times[index];
         float t1 = channel.times[index + 1];
-        float factor = (time - t0) / (t1 - t0);
+        float dt = t1 - t0;
+        float s = (time - t0) / dt;
+        const Quaternion& q0 = channel.rotations[index];
+        const Quaternion& q1 = channel.rotations[index + 1];
 
-        return Quaternion::Slerp(channel.rotations[index], channel.rotations[index + 1], factor);
+        if (channel.interpolation == AnimationInterpolation::CubicSpline)
+        {
+            if (channel.outTangentsQuat.empty() || channel.inTangentsQuat.empty())
+                return Quaternion::Slerp(q0, q1, s);
+
+            const Quaternion& a0 = channel.outTangentsQuat[index];
+            const Quaternion& b1 = channel.inTangentsQuat[index + 1];
+
+            float s2 = s * s;
+            float s3 = s2 * s;
+            float h00 = 2 * s3 - 3 * s2 + 1;
+            float h10 = s3 - 2 * s2 + s;
+            float h01 = -2 * s3 + 3 * s2;
+            float h11 = s3 - s2;
+
+            // Interpolate as 4D vector
+            Quaternion res = q0 * h00 + (a0 * (h10 * dt)) + q1 * h01 + (b1 * (h11 * dt));
+            return res.Normalize();
+        }
+        else
+            return Quaternion::Slerp(q0, q1, s);
     }
 
     Vector3 Animator::InterpolateScale(const AnimationChannel& channel, float time) const
@@ -445,7 +542,6 @@ namespace cl
             return channel.scales[0];
 
         int index = FindKeyframeIndex(channel.times, time);
-
         if (index < 0)
             return channel.scales[0];
 
@@ -457,16 +553,30 @@ namespace cl
 
         float t0 = channel.times[index];
         float t1 = channel.times[index + 1];
-        float factor = (time - t0) / (t1 - t0);
+        float dt = t1 - t0;
+        float s = (time - t0) / dt;
+        const Vector3& p0 = channel.scales[index];
+        const Vector3& p1 = channel.scales[index + 1];
 
-        const Vector3& v0 = channel.scales[index];
-        const Vector3& v1 = channel.scales[index + 1];
+        if (channel.interpolation == AnimationInterpolation::CubicSpline)
+        {
+            if (channel.outTangentsScale.empty() || channel.inTangentsScale.empty())
+                return p0 + (p1 - p0) * s;
 
-        return Vector3(
-            v0.x + (v1.x - v0.x) * factor,
-            v0.y + (v1.y - v0.y) * factor,
-            v0.z + (v1.z - v0.z) * factor
-        );
+            const Vector3& a0 = channel.outTangentsScale[index];
+            const Vector3& b1 = channel.inTangentsScale[index + 1];
+
+            float s2 = s * s;
+            float s3 = s2 * s;
+            float h00 = 2 * s3 - 3 * s2 + 1;
+            float h10 = s3 - 2 * s2 + s;
+            float h01 = -2 * s3 + 3 * s2;
+            float h11 = s3 - s2;
+
+            return p0 * h00 + (a0 * dt) * h10 + p1 * h01 + (b1 * dt) * h11;
+        }
+        else
+            return p0 + (p1 - p0) * s;
     }
 
     int Animator::FindKeyframeIndex(const std::vector<float>& times, float time) const
