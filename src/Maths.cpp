@@ -504,6 +504,46 @@ namespace cl
         return inv;
     }
 
+    Vector3 Matrix4::GetTranslation() const
+    {
+        return Vector3(m[12], m[13], m[14]);
+    }
+
+    Quaternion Matrix4::GetRotation() const
+    {
+        Vector3 scale = GetScale();
+        Matrix4 rotMat = *this;
+
+        if (scale.x != 0.0f)
+        {
+            rotMat.m[0] /= scale.x;
+            rotMat.m[1] /= scale.x;
+            rotMat.m[2] /= scale.x;
+        }
+        if (scale.y != 0.0f)
+        {
+            rotMat.m[4] /= scale.y;
+            rotMat.m[5] /= scale.y;
+            rotMat.m[6] /= scale.y;
+        }
+        if (scale.z != 0.0f)
+        {
+            rotMat.m[8] /= scale.z;
+            rotMat.m[9] /= scale.z;
+            rotMat.m[10] /= scale.z;
+        }
+
+        return Quaternion::FromMatrix(rotMat);
+    }
+
+    Vector3 Matrix4::GetScale() const
+    {
+        Vector3 colX(m[0], m[1], m[2]);
+        Vector3 colY(m[4], m[5], m[6]);
+        Vector3 colZ(m[8], m[9], m[10]);
+        return Vector3(colX.Length(), colY.Length(), colZ.Length());
+    }
+
     // Random numbers
 
     void SetRandomSeed(unsigned int seed)

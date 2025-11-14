@@ -140,6 +140,9 @@ namespace cl
         Vector3 TransformPoint(const Vector3& v) const;
         Vector3 TransformDirection(const Vector3& v) const;
         Matrix4 Inverse() const;
+        Vector3 GetTranslation() const;
+        Quaternion GetRotation() const;
+        Vector3 GetScale() const;
 
         Matrix4 operator*(const Matrix4& other) const;
         Matrix4& operator*=(const Matrix4& other) { *this = *this * other; return *this; }
