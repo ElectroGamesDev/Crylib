@@ -242,7 +242,7 @@ namespace cl
 
         if (!bgfx::isValid(idb.handle))
         {
-            std::cerr << "[ERROR] Failed to allocate instance data buffer for single mesh draw.\n";
+            std::cerr << "[ERROR] Failed to allocate instance data buffer for single mesh draw." << std::endl;
             return;
         }
 
@@ -428,7 +428,7 @@ namespace cl
             // Check validity
             if (!bgfx::isValid(idb.handle))
             {
-                std::cerr << "[ERROR] Failed to allocate instance data buffer for batch of " << batchSize << " instances.\n";
+                std::cerr << "[ERROR] Failed to allocate instance data buffer for batch of " << batchSize << " instances." << std::endl;
                 instanceOffset += batchSize;
                 continue;
             }

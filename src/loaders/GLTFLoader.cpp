@@ -917,7 +917,7 @@ namespace cl
             else if (hasSkeletalChannels && hasNodeChannels)
             {
                 clip->SetAnimationType(AnimationType::Skeletal);
-                std::cout << "[WARNING] Animation '" << clip->GetName() << "' has both skeletal and node channels. Using skeletal mode.\n";
+                std::cout << "[WARNING] Animation '" << clip->GetName() << "' has both skeletal and node channels. Using skeletal mode." << std::endl;
             }
             else
                 clip->SetAnimationType(AnimationType::NodeBased);
@@ -971,7 +971,7 @@ namespace cl
                         weightChannel.targetNodeIndex = nodeIt->second;
                     else
                     {
-                        std::cout << "[WARNING] Node not found for morph weight animation\n";
+                        std::cout << "[WARNING] Node not found for morph weight animation" << std::endl;
                         continue;
                     }
 
@@ -985,7 +985,7 @@ namespace cl
 
                     if (weightsPerFrame == 0)
                     {
-                        std::cout << "[WARNING] Morph weight animation found but no morph targets on node\n";
+                        std::cout << "[WARNING] Morph weight animation found but no morph targets on node" << std::endl;
                         continue;
                     }
 
@@ -996,7 +996,7 @@ namespace cl
                         // For cubic spline, data has 3x values: inTangent, value, outTangent
                         if (dataAccessor->count != keyCount * 3 * weightsPerFrame)
                         {
-                            std::cerr << "[ERROR] Cubic spline morph weight data count mismatch\n";
+                            std::cerr << "[ERROR] Cubic spline morph weight data count mismatch" << std::endl;
                             continue;
                         }
 
@@ -1017,7 +1017,7 @@ namespace cl
                         // Linear or Step interpolation
                         if (dataAccessor->count != keyCount * weightsPerFrame)
                         {
-                            std::cerr << "[ERROR] Morph weight data count mismatch\n";
+                            std::cerr << "[ERROR] Morph weight data count mismatch" << std::endl;
                             continue;
                         }
 
@@ -1156,7 +1156,7 @@ namespace cl
                         nodeChannel.targetNodeIndex = nodeIt->second;
                     else
                     {
-                        std::cout << "[WARNING] Node not found in node map for animation channel\n";
+                        std::cout << "[WARNING] Node not found in node map for animation channel" << std::endl;
                         continue;
                     }
 

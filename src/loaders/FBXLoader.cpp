@@ -841,7 +841,7 @@ namespace cl
             {
                 // Mixed animation types, priortize skeleton
                 clip->SetAnimationType(AnimationType::Skeletal);
-                std::cout << "[WARNING] Animation '" << clip->GetName() << "' has both skeletal and node channels. Using skeletal mode.\n";
+                std::cout << "[WARNING] Animation '" << clip->GetName() << "' has both skeletal and node channels. Using skeletal mode." << std::endl;
             }
             else // No valid channels, default to skeletal
                 clip->SetAnimationType(AnimationType::Skeletal);
@@ -967,7 +967,7 @@ namespace cl
         else if (hasSkeletalChannels && hasNodeChannels)
         {
             clip->SetAnimationType(AnimationType::Skeletal);
-            std::cout << "[WARNING] Animation '" << clip->GetName() << "' has both skeletal and node channels. Using skeletal mode.\n";
+            std::cout << "[WARNING] Animation '" << clip->GetName() << "' has both skeletal and node channels. Using skeletal mode." << std::endl;
         }
         else
             clip->SetAnimationType(AnimationType::Skeletal);
@@ -1091,7 +1091,7 @@ namespace cl
         else if (hasSkeletalChannels && hasNodeChannels)
         {
             clip->SetAnimationType(AnimationType::Skeletal);
-            std::cout << "[WARNING] Animation '" << clip->GetName() << "' has both skeletal and node channels. Using skeletal mode.\n";
+            std::cout << "[WARNING] Animation '" << clip->GetName() << "' has both skeletal and node channels. Using skeletal mode." << std::endl;
         }
         else
             clip->SetAnimationType(AnimationType::Skeletal);
@@ -1203,7 +1203,7 @@ namespace cl
             else if (hasSkeletalChannels && hasNodeChannels)
             {
                 clip->SetAnimationType(AnimationType::Skeletal);
-                std::cout << "[WARNING] Animation '" << clip->GetName() << "' has both skeletal and node channels. Using skeletal mode.\n";
+                std::cout << "[WARNING] Animation '" << clip->GetName() << "' has both skeletal and node channels. Using skeletal mode." << std::endl;
             }
             else
                 clip->SetAnimationType(AnimationType::Skeletal);

@@ -121,7 +121,7 @@ namespace cl
         {
             if (!m_skeleton)
             {
-                std::cout << "[WARNING] Failed to play the animation \"" << clip->GetName() << "\". No skeleton assigned.\n";
+                std::cout << "[WARNING] Failed to play the animation \"" << clip->GetName() << "\". No skeleton assigned." << std::endl;
                 m_playing = false;
                 return;
             }

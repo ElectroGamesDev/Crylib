@@ -168,7 +168,7 @@ namespace cl
         m_impl->program = bgfx::createProgram(m_impl->vertex, m_impl->fragment, true);
         if (!bgfx::isValid(m_impl->program))
         {
-            std::cerr << "Shader::Load: failed to create program\n";
+            std::cerr << "Shader::Load: failed to create program" << std::endl;
             Destroy();
             return false;
         }
