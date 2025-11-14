@@ -76,7 +76,7 @@ namespace cl
         // Create default shader
         //s_renderer->defaultProgram = CreateDefaultShader();
 
-        u_BoneMatrices = bgfx::createUniform("u_BoneMatrices", bgfx::UniformType::Mat4, 128); // This is enough for most models, but to configure it, it would also need to be set in the shader. Also, should we instead be using mat4?
+        u_BoneMatrices = bgfx::createUniform("u_BoneMatrices", bgfx::UniformType::Mat4, 128); // This is enough for most models, but to configure it, it would also need to be set in the shader.
         u_IsSkinned = bgfx::createUniform("u_IsSkinned", bgfx::UniformType::Vec4);
 
         return true;
@@ -231,7 +231,7 @@ namespace cl
         }
     }
 
-    void DrawMesh(Mesh* mesh, const Matrix4& transform)
+    void DrawMesh(Mesh* mesh, const Matrix4& transform, const std::vector<Matrix4>* bones)
     {
         if (s_renderer->currentViewId == 0 || !mesh || !mesh->IsValid() || !mesh->GetMaterial() || !mesh->GetMaterial()->GetShader())
             return;
@@ -250,6 +250,7 @@ namespace cl
         std::memcpy(idb.data, &transform, sizeof(Matrix4));
 
         mesh->ApplyMorphTargets(); // Todo: It would be best to blend weights in the shader
+        mesh->UpdateBuffer();
 
         bgfx::setVertexBuffer(0, mesh->GetVertexBuffer());
         bgfx::setIndexBuffer(mesh->GetIndexBuffer());
@@ -279,6 +280,18 @@ namespace cl
         // Apply skinned and bone uniforms
         float skinned[4] = { mesh->IsSkinned() ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f };
         bgfx::setUniform(u_IsSkinned, skinned);
+
+        //if (bones && mesh->IsSkinned())
+        //    bgfx::setUniform(u_BoneMatrices, bones->data(), static_cast<uint16_t>(bones->size())); // Todo: There may be issues if the bones > max bones set when creating the u_boneMatrices uniform
+
+        if (bones && mesh->IsSkinned())
+        {
+            size_t numBones = bones->size();
+            std::vector<Matrix4> transposedBones(numBones);
+            for (size_t i = 0; i < numBones; ++i)
+                transposedBones[i] = (*bones)[i].Transpose();
+            bgfx::setUniform(u_BoneMatrices, transposedBones.data(), static_cast<uint16_t>(numBones)); // Todo: There may be issues if the bones > max bones set when creating the u_boneMatrices
+        }
 
         bgfx::setState(state);
         bgfx::submit(s_renderer->currentViewId, shader->GetHandle());
@@ -313,18 +326,6 @@ namespace cl
         if (!model)
             return;
 
-        for (const auto& mesh : model->GetMeshes())
-            DrawMesh(mesh.get(), transform);
-    }
-
-    void DrawModel(Model* model, const Vector3& position, const Quaternion& rotation, const Vector3& scale)
-    {
-        if (!model || !model->HasMeshes())
-            return;
-
-        Matrix4 baseTransform = Matrix4::Translate(position) * rotation.ToMatrix() * Matrix4::Scale(scale);
-
-        // Determine what animation data to use
         const Animator* animator = model->GetAnimator();
         const std::vector<Matrix4>* bones = nullptr;
         bool useNodeAnimation = false;
@@ -335,58 +336,49 @@ namespace cl
             if (currentClip)
             {
                 if (currentClip->GetAnimationType() == AnimationType::Skeletal && model->HasSkeleton())
-                    bones = &animator->GetBoneMatrices();
+                    bones = &animator->GetFinalBoneMatrices();
                 else if (currentClip->GetAnimationType() == AnimationType::NodeBased)
                     useNodeAnimation = true;
             }
         }
         else if (animator && model->HasSkeleton())
-            bones = &animator->GetBoneMatrices(); // Even though there isn't an animation playing, we still need to bind the pose
+            bones = &animator->GetFinalBoneMatrices();
 
-        // Draw all meshes
+        // Draw each mesh
         if (useNodeAnimation)
         {
             const auto& nodeTransforms = animator->GetNodeTransforms();
             for (size_t i = 0; i < model->GetMeshes().size(); ++i)
             {
                 const auto& mesh = model->GetMeshes()[i];
-                Matrix4 meshTransform = baseTransform;
+                Matrix4 meshTransform = transform;
 
-                // Checks if the mesh hs an animated node transform
                 if (i < nodeTransforms.size() && nodeTransforms[i] != Matrix4::Identity())
-                    meshTransform = baseTransform * nodeTransforms[i];
-                else if (!nodeTransforms.empty())
-                {
-                    for (const auto& transform : nodeTransforms)
-                    {
-                        if (transform != Matrix4::Identity())
-                        {
-                            meshTransform = baseTransform * transform;
-                            break;
-                        }
-                    }
-                }
+                    meshTransform = transform * nodeTransforms[i];
 
-                DrawMesh(mesh.get(), meshTransform);
+                //for (size_t i = 0; i < numBones; ++i)
+                //{
+                //    const Matrix4& mat = (*bones)[i];
+                //    memcpy(&boneData[i * 16], mat.m, 16 * sizeof(float));
+                //}
+
+                DrawMesh(mesh.get(), meshTransform, bones);
             }
         }
         else
         {
-            if (bones)
-            {
-                size_t numBones = bones->size();
-                std::vector<float> boneData(numBones * 16);
-                for (size_t i = 0; i < numBones; ++i)
-                {
-                    const Matrix4& mat = (*bones)[i];
-                    memcpy(&boneData[i * 16], mat.m, 16 * sizeof(float));
-                }
-
-                bgfx::setUniform(u_BoneMatrices, boneData.data(), static_cast<uint16_t>(numBones)); // Todo: There may be issues if the bones > max bones set when creating the u_boneMatrices uniform
-            }
             for (const auto& mesh : model->GetMeshes())
-                DrawMesh(mesh.get(), baseTransform);
+                DrawMesh(mesh.get(), transform, bones);
         }
+    }
+
+    void DrawModel(Model* model, const Vector3& position, const Quaternion& rotation, const Vector3& scale)
+    {
+        if (!model || !model->HasMeshes())
+            return;
+
+        Matrix4 baseTransform = Matrix4::Translate(position) * rotation.ToMatrix() * Matrix4::Scale(scale);
+        DrawModel(model, baseTransform);
     }
 
     void DrawModel(Model* model, const Vector3& position, const Vector3& rotation, const Vector3& scale)
@@ -414,6 +406,7 @@ namespace cl
             return;
 
         mesh->ApplyMorphTargets(); // Todo: It would be best to blend weights in the shader
+        mesh->UpdateBuffer();
 
         Material* material = mesh->GetMaterial();
         Shader* shader = material->GetShader();
@@ -468,15 +461,17 @@ namespace cl
 
             if (mesh->IsSkinned() && boneMatrices)
             {
-                size_t numBones = boneMatrices->size();
-                std::vector<float> boneData(numBones * 16);
-                for (size_t i = 0; i < numBones; ++i)
-                {
-                    const Matrix4& mat = (*boneMatrices)[i];
-                    memcpy(&boneData[i * 16], mat.m, 16 * sizeof(float));
-                }
+                //if (bones && mesh->IsSkinned())
+                //    bgfx::setUniform(u_BoneMatrices, bones->data(), static_cast<uint16_t>(bones->size())); // Todo: There may be issues if the bones > max bones set when creating the u_boneMatrices uniform
 
-                bgfx::setUniform(u_BoneMatrices, boneData.data(), static_cast<uint16_t>(numBones));
+                if (boneMatrices && mesh->IsSkinned())
+                {
+                    size_t numBones = boneMatrices->size();
+                    std::vector<Matrix4> transposedBones(numBones);
+                    for (size_t i = 0; i < numBones; ++i)
+                        transposedBones[i] = (*boneMatrices)[i].Transpose();
+                    bgfx::setUniform(u_BoneMatrices, transposedBones.data(), static_cast<uint16_t>(numBones)); // Todo: There may be issues if the bones > max bones set when creating the u_boneMatrices
+                }
             }
 
             bgfx::setState(state);
@@ -507,13 +502,13 @@ namespace cl
             if (clip)
             {
                 if (clip->GetAnimationType() == AnimationType::Skeletal && model->HasSkeleton())
-                    bones = &animator->GetBoneMatrices();
+                    bones = &animator->GetFinalBoneMatrices();
                 else if (clip->GetAnimationType() == AnimationType::NodeBased)
                     skipInstancing = true;
             }
         }
         else if (animator && model->HasSkeleton())
-            bones = &animator->GetBoneMatrices();
+            bones = &animator->GetFinalBoneMatrices();
         if (skipInstancing)
         {
             DrawModel(model, model->GetPosition(), model->GetRotationQuat(), model->GetScale());

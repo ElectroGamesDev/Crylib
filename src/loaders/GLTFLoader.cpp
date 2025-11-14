@@ -27,59 +27,63 @@ namespace cl
             for (int i = 0; i < count; ++i)
                 weights[i] *= invSum;
         }
-    }
-
-    static void ExtractNodeTransform(cgltf_node* node, Vector3& translation, Quaternion& rotation, Vector3& scale)
-    {
-        if (node->has_matrix)
-        {
-            Matrix4 mat;
-            for (int i = 0; i < 16; ++i)
-                mat.m[i] = node->matrix[i];
-
-            translation = Vector3(mat.m[12], mat.m[13], mat.m[14]);
-
-            Vector3 scaleX(mat.m[0], mat.m[1], mat.m[2]);
-            Vector3 scaleY(mat.m[4], mat.m[5], mat.m[6]);
-            Vector3 scaleZ(mat.m[8], mat.m[9], mat.m[10]);
-            scale = Vector3(scaleX.Length(), scaleY.Length(), scaleZ.Length());
-
-            Matrix4 rotMat = mat;
-
-            if (scale.x != 0.0f)
-            {
-                rotMat.m[0] /= scale.x;
-                rotMat.m[1] /= scale.x;
-                rotMat.m[2] /= scale.x;
-            }
-
-            if (scale.y != 0.0f)
-            {
-                rotMat.m[4] /= scale.y;
-                rotMat.m[5] /= scale.y;
-                rotMat.m[6] /= scale.y;
-            }
-
-            if (scale.z != 0.0f)
-            {
-                rotMat.m[8] /= scale.z;
-                rotMat.m[9] /= scale.z;
-                rotMat.m[10] /= scale.z;
-            }
-
-            rotation = Quaternion::FromMatrix(rotMat);
-        }
         else
         {
-            translation = node->has_translation ? Vector3(node->translation[0], node->translation[1], node->translation[2]) : Vector3(0.0f, 0.0f, 0.0f);
-            rotation = node->has_rotation ? Quaternion(node->rotation[0], node->rotation[1], node->rotation[2], node->rotation[3]) : Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
-            scale = node->has_scale ? Vector3(node->scale[0], node->scale[1], node->scale[2]) : Vector3(1.0f, 1.0f, 1.0f);
+            // If all weights are zero, this vertex isn't skinned so set first weight to 1
+            weights[0] = 1.0f;
         }
     }
 
+    //static void ExtractNodeTransform(cgltf_node* node, Vector3& translation, Quaternion& rotation, Vector3& scale)
+    //{
+    //    if (node->has_matrix)
+    //    {
+    //        Matrix4 mat;
+    //        for (int i = 0; i < 16; ++i)
+    //            mat.m[i] = node->matrix[i];
+
+    //        translation = Vector3(mat.m[12], mat.m[13], mat.m[14]);
+
+    //        Vector3 scaleX(mat.m[0], mat.m[1], mat.m[2]);
+    //        Vector3 scaleY(mat.m[4], mat.m[5], mat.m[6]);
+    //        Vector3 scaleZ(mat.m[8], mat.m[9], mat.m[10]);
+    //        scale = Vector3(scaleX.Length(), scaleY.Length(), scaleZ.Length());
+
+    //        Matrix4 rotMat = mat;
+
+    //        if (scale.x != 0.0f)
+    //        {
+    //            rotMat.m[0] /= scale.x;
+    //            rotMat.m[1] /= scale.x;
+    //            rotMat.m[2] /= scale.x;
+    //        }
+
+    //        if (scale.y != 0.0f)
+    //        {
+    //            rotMat.m[4] /= scale.y;
+    //            rotMat.m[5] /= scale.y;
+    //            rotMat.m[6] /= scale.y;
+    //        }
+
+    //        if (scale.z != 0.0f)
+    //        {
+    //            rotMat.m[8] /= scale.z;
+    //            rotMat.m[9] /= scale.z;
+    //            rotMat.m[10] /= scale.z;
+    //        }
+
+    //        rotation = Quaternion::FromMatrix(rotMat);
+    //    }
+    //    else
+    //    {
+    //        translation = node->has_translation ? Vector3(node->translation[0], node->translation[1], node->translation[2]) : Vector3(0.0f, 0.0f, 0.0f);
+    //        rotation = node->has_rotation ? Quaternion(node->rotation[0], node->rotation[1], node->rotation[2], node->rotation[3]) : Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+    //        scale = node->has_scale ? Vector3(node->scale[0], node->scale[1], node->scale[2]) : Vector3(1.0f, 1.0f, 1.0f);
+    //    }
+    //}
+
 #ifdef DRACO_SUPPORTED
-    static bool DecompressDraco(cgltf_primitive& primitive, cgltf_data* data,
-        std::vector<Vertex>& vertices, std::vector<uint32_t>& indices)
+    static bool DecompressDraco(cgltf_primitive& primitive, cgltf_data* data, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices)
     {
         cgltf_draco_mesh_compression* dracoCompression = nullptr;
 
@@ -274,9 +278,11 @@ namespace cl
             skeleton = new Skeleton();
             cgltf_skin* skin = &data->skins[0];
 
-            skeleton->bones.resize(skin->joints_count);
+            size_t jointCount = skin->joints_count;
+            skeleton->bones.resize(jointCount);
 
-            for (size_t i = 0; i < skin->joints_count; ++i)
+            // Map nodes -> joint index and fill bone names
+            for (size_t i = 0; i < jointCount; ++i)
             {
                 cgltf_node* joint = skin->joints[i];
                 Bone& bone = skeleton->bones[i];
@@ -286,7 +292,8 @@ namespace cl
                 skeleton->boneMap[bone.name] = static_cast<int>(i);
             }
 
-            for (size_t i = 0; i < skin->joints_count; ++i)
+            // Build parent indices and local transforms
+            for (size_t i = 0; i < jointCount; ++i)
             {
                 cgltf_node* joint = skin->joints[i];
                 Bone& bone = skeleton->bones[i];
@@ -299,26 +306,72 @@ namespace cl
                         bone.parentIndex = it->second;
                 }
 
-                Vector3 translation, scale;
-                Quaternion rotation;
-                ExtractNodeTransform(joint, translation, rotation, scale);
-
-                bone.localTransform = Matrix4::Translate(translation) * Matrix4::FromQuaternion(rotation) * Matrix4::Scale(scale);
+                // Use cgltf helper to get local matrix (correct for glTF)
+                Matrix4 localMat;
+                cgltf_node_transform_local(joint, localMat.m);
+                bone.localTransform = localMat;
             }
 
-            if (skin->inverse_bind_matrices)
-            {
-                cgltf_accessor* accessor = skin->inverse_bind_matrices;
-                for (size_t i = 0; i < skin->joints_count && i < accessor->count; ++i)
-                {
-                    float mat[16];
-                    cgltf_accessor_read_float(accessor, i, mat, 16);
-                    Matrix4& invBind = skeleton->bones[i].inverseBindMatrix;
+            // Read inverse bind matrices if provided
+            cgltf_accessor* ibmAccessor = skin->inverse_bind_matrices;
+            bool hasInverseBind = (ibmAccessor != nullptr);
 
-                    for (int j = 0; j < 16; ++j)
-                        invBind.m[j] = mat[j];
+            if (hasInverseBind)
+            {
+                // read provided inverse bind matrices
+                for (size_t i = 0; i < jointCount; ++i)
+                {
+                    float m[16];
+                    cgltf_accessor_read_float(ibmAccessor, i, m, 16);
+                    skeleton->bones[i].inverseBindMatrix = Matrix4(m);
                 }
             }
+            else
+            {
+                // Need to compute inverse bind matrices from bind pose
+                // Build adjacency list (children) to traverse hierarchy robustly
+                std::vector<std::vector<int>> children;
+                children.resize(jointCount);
+                for (size_t i = 0; i < jointCount; ++i)
+                {
+                    int p = skeleton->bones[i].parentIndex;
+                    if (p >= 0 && static_cast<size_t>(p) < jointCount)
+                        children[p].push_back((int)i);
+                }
+
+                // compute global bind pose for each bone in proper order
+                std::vector<Matrix4> bindPoseGlobal(jointCount, Matrix4::Identity());
+
+                std::function<void(int, const Matrix4&)> computeBindPose = [&](int index, const Matrix4& parentTransform)
+                    {
+                        // local transform already stored in bone.localTransform (from cgltf_node_transform_local)
+                        const Matrix4& local = skeleton->bones[index].localTransform;
+                        Matrix4 global = parentTransform * local;
+                        bindPoseGlobal[index] = global;
+
+                        for (int childIdx : children[index])
+                        {
+                            computeBindPose(childIdx, global);
+                        }
+                    };
+
+                // Start recursion at roots
+                for (size_t i = 0; i < jointCount; ++i)
+                {
+                    if (skeleton->bones[i].parentIndex == -1)
+                        computeBindPose((int)i, Matrix4::Identity());
+                }
+
+                // invert to get inverse bind matrices
+                for (size_t i = 0; i < jointCount; ++i)
+                {
+                    skeleton->bones[i].inverseBindMatrix = bindPoseGlobal[i].Inverse();
+                }
+            }
+
+            // Make sure finalMatrices vector exists and compute finalMatrices
+            skeleton->finalMatrices.resize(jointCount);
+            skeleton->UpdateFinalMatrices();
 
             model->SetSkeleton(skeleton);
             model->SetSkinned(true);
@@ -799,14 +852,18 @@ namespace cl
         std::function<void(cgltf_node*, const Matrix4&)> ProcessNode;
         ProcessNode = [&](cgltf_node* node, const Matrix4& parentTransform)
         {
-            Vector3 translation, scale;
-            Quaternion rotation;
-            ExtractNodeTransform(node, translation, rotation, scale);
+            //Vector3 translation, scale;
+            //Quaternion rotation;
+            //ExtractNodeTransform(node, translation, rotation, scale);
 
-            Matrix4 t = Matrix4::Translate(translation);
-            Matrix4 r = Matrix4::FromQuaternion(rotation);
-            Matrix4 s = Matrix4::Scale(scale);
-            Matrix4 local = t * r * s;
+            //Matrix4 t = Matrix4::Translate(translation);
+            //Matrix4 r = Matrix4::FromQuaternion(rotation);
+            //Matrix4 s = Matrix4::Scale(scale);
+            //Matrix4 local = t * r * s;
+
+            Matrix4 local;
+            cgltf_node_transform_local(node, local.m);
+
             Matrix4 worldTransform = parentTransform * local;
 
             if (node->mesh)

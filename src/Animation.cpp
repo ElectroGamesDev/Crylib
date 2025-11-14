@@ -86,6 +86,7 @@ namespace cl
         {
             m_localTransforms.resize(m_skeleton->bones.size());
             m_boneMatrices.resize(m_skeleton->bones.size());
+
             for (size_t i = 0; i < m_skeleton->bones.size(); ++i)
                 m_localTransforms[i] = m_skeleton->bones[i].localTransform;
 
@@ -103,20 +104,24 @@ namespace cl
         m_playing = true;
         m_paused = false;
         m_loop = loop;
+
         if (clip->GetAnimationType() == AnimationType::Skeletal)
         {
             if (!m_skeleton)
             {
-                std::cout << "[WARNING] Failed to play the animation \"" << clip->GetName() << "\". This animation does not have a skeleton. Call \"clip.SetAnimationType(AnimationType::NodeBased)\" to change it to fix the issue.\n";
+                std::cout << "[WARNING] Failed to play the animation \"" << clip->GetName() << "\". No skeleton assigned.\n";
                 m_playing = false;
                 return;
             }
+
             m_localTransforms.resize(m_skeleton->bones.size());
+            m_boneMatrices.resize(m_skeleton->bones.size());
+
             for (size_t i = 0; i < m_skeleton->bones.size(); ++i)
                 m_localTransforms[i] = m_skeleton->bones[i].localTransform;
 
-            // Todo: Do these need to be called?
             SampleAnimation(m_currentTime);
+
             CalculateBoneTransforms();
         }
         else
@@ -183,6 +188,7 @@ namespace cl
             {
                 SampleAnimation(m_currentTime);
                 CalculateBoneTransforms();
+                m_boneMatrices = m_skeleton->finalMatrices;
             }
         }
         else
@@ -190,7 +196,6 @@ namespace cl
 
         SampleMorphWeights(m_currentTime, meshes);
     }
-
 
     void Animator::SetTime(float time)
     {
@@ -203,28 +208,43 @@ namespace cl
         {
             SampleAnimation(m_currentTime);
             CalculateBoneTransforms();
+            m_boneMatrices = m_skeleton->finalMatrices;
         }
     }
+
 
     void Animator::SampleAnimation(float time)
     {
         if (!m_currentClip || !m_skeleton)
             return;
 
+        // Reset to bind pose each sample to avoid accumulation errors
+        for (size_t i = 0; i < m_skeleton->bones.size(); ++i)
+            m_localTransforms[i] = m_skeleton->bones[i].localTransform;
+
         for (const auto& channel : m_currentClip->GetChannels())
         {
-            if (channel.targetBoneIndex < 0 || channel.targetBoneIndex >= static_cast<int>(m_skeleton->bones.size()))
+            int boneIndex = channel.targetBoneIndex;
+            if (boneIndex < 0 || boneIndex >= static_cast<int>(m_skeleton->bones.size()))
                 continue;
 
-            Vector3 translation = InterpolateTranslation(channel, time);
-            Quaternion rotation = InterpolateRotation(channel, time);
-            Vector3 scale = InterpolateScale(channel, time);
+            Vector3 translation = m_localTransforms[boneIndex].GetTranslation();
+            Quaternion rotation = m_localTransforms[boneIndex].GetRotation();
+            Vector3 scale = m_localTransforms[boneIndex].GetScale();
+
+            if (!channel.translations.empty())
+                translation = InterpolateTranslation(channel, time);
+
+            if (!channel.rotations.empty())
+                rotation = InterpolateRotation(channel, time);
+
+            if (!channel.scales.empty())
+                scale = InterpolateScale(channel, time);
 
             Matrix4 t = Matrix4::Translate(translation);
             Matrix4 r = Matrix4::FromQuaternion(rotation);
             Matrix4 s = Matrix4::Scale(scale);
-
-            m_localTransforms[channel.targetBoneIndex] = t * r * s;
+            m_localTransforms[boneIndex] = t * r * s;
         }
     }
 
@@ -427,20 +447,23 @@ namespace cl
         );
     }
 
+
     void Animator::CalculateBoneTransforms()
     {
         if (!m_skeleton)
             return;
 
-        // Todo: This solution works no matter how the bones are ordered, but it's O(n) which is slow compared to the old method. Will need to fix this.
         m_boneMatrices.resize(m_skeleton->bones.size());
 
+        // Todo: This is slow
         // Recursive computation to ensure topological order
         std::function<void(int, const Matrix4&)> computeBoneMatrix = [&](int index, const Matrix4& parentTransform)
         {
             const Bone& bone = m_skeleton->bones[index];
+
             Matrix4 globalTransform = parentTransform * m_localTransforms[index];
             m_boneMatrices[index] = globalTransform * bone.inverseBindMatrix;
+
             for (size_t i = 0; i < m_skeleton->bones.size(); ++i)
             {
                 if (m_skeleton->bones[i].parentIndex == index)
@@ -454,21 +477,8 @@ namespace cl
                 computeBoneMatrix(static_cast<int>(i), Matrix4::Identity());
         }
 
-
-        // Old method
-        //std::vector<Matrix4> globalTransforms(m_skeleton->bones.size());
-
-        //for (size_t i = 0; i < m_skeleton->bones.size(); ++i)
-        //{
-        //    const Bone& bone = m_skeleton->bones[i];
-
-        //    if (bone.parentIndex >= 0)
-        //        globalTransforms[i] = globalTransforms[bone.parentIndex] * m_localTransforms[i];
-        //    else
-        //        globalTransforms[i] = m_localTransforms[i];
-
-        //    m_boneMatrices[i] = globalTransforms[i] * bone.inverseBindMatrix;
-        //}
+        if (m_skeleton)
+            m_skeleton->finalMatrices = m_boneMatrices;
     }
 
     Vector3 Animator::InterpolateTranslation(const AnimationChannel& channel, float time) const

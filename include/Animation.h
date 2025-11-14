@@ -54,8 +54,13 @@ namespace cl
 
             finalMatrices.resize(bones.size());
 
+            //for (size_t i = 0; i < bones.size(); ++i)
+            //    ComputeBoneMatrix((int)i, Matrix4::Identity());
             for (size_t i = 0; i < bones.size(); ++i)
-                ComputeBoneMatrix((int)i, Matrix4::Identity());
+            {
+                if (bones[i].parentIndex == -1)
+                    ComputeBoneMatrix((int)i, Matrix4::Identity());
+            }
         }
     };
 
@@ -203,6 +208,13 @@ namespace cl
         bool IsLooping() const { return m_loop; }
 
         const std::vector<Matrix4>& GetBoneMatrices() const { return m_boneMatrices; }
+        const std::vector<Matrix4>& GetFinalBoneMatrices() const
+        {
+            if (!m_skeleton)
+                return {};
+
+            return m_skeleton->finalMatrices;
+        }
 
         AnimationClip* GetCurrentClip() const { return m_currentClip; }
 

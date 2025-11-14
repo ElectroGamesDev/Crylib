@@ -149,6 +149,7 @@ namespace cl
         Vector3 GetTranslation() const;
         Quaternion GetRotation() const;
         Vector3 GetScale() const;
+        Matrix4 Transpose() const;
 
         Matrix4 operator*(const Matrix4& other) const;
         Matrix4& operator*=(const Matrix4& other) { *this = *this * other; return *this; }

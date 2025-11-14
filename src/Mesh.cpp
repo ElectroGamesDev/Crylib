@@ -78,12 +78,15 @@ namespace cl
             .add(bgfx::Attrib::Weight, 4, bgfx::AttribType::Float)
             .end();
 
-        const bgfx::Memory* vbMem = bgfx::copy(m_vertices.data(),
-            static_cast<uint32_t>(m_vertices.size() * sizeof(Vertex)));
-        m_vbh = bgfx::createVertexBuffer(vbMem, layout);
-
-        const bgfx::Memory* ibMem = bgfx::copy(m_indices.data(),
-            static_cast<uint32_t>(m_indices.size() * sizeof(uint32_t)));
+        const bgfx::Memory* vbMem = bgfx::copy(m_vertices.data(), static_cast<uint32_t>(m_vertices.size() * sizeof(Vertex)));
+        //if (m_dynamic)
+        //{
+        //    m_vbh = bgfx::createDynamicVertexBuffer(static_cast<uint32_t>(m_vertices.size()), layout, 0);
+        //    bgfx::update(m_vbh, 0, vbMem);
+        //}
+        //else
+            m_vbh = bgfx::createVertexBuffer(vbMem, layout);
+        const bgfx::Memory* ibMem = bgfx::copy(m_indices.data(), static_cast<uint32_t>(m_indices.size() * sizeof(uint32_t)));
         m_ibh = bgfx::createIndexBuffer(ibMem, BGFX_BUFFER_INDEX32);
 
         m_uploaded = true;
@@ -116,6 +119,15 @@ namespace cl
                 return;
             }
         }
+    }
+
+    void Mesh::UpdateBuffer()
+    {
+        if (!m_dynamic || !bgfx::isValid(m_vbh) || m_vertices.empty())
+            return;
+
+        //const bgfx::Memory* mem = bgfx::copy(m_vertices.data(), static_cast<uint32_t>(m_vertices.size() * sizeof(Vertex)));
+        //bgfx::update(m_vbh, 0, mem);
     }
 
     void Mesh::ApplyMorphTargets()

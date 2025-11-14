@@ -52,9 +52,10 @@ namespace cl
 
         bgfx::VertexBufferHandle GetVertexBuffer() const { return m_vbh; }
         bgfx::IndexBufferHandle GetIndexBuffer() const { return m_ibh; }
+        void UpdateBuffer();
         bool IsValid() const { return bgfx::isValid(m_vbh) && bgfx::isValid(m_ibh); }
 
-        void SetMorphTargets(const std::vector<MorphTarget>& targets) { m_morphTargets = targets; }
+        void SetMorphTargets(const std::vector<MorphTarget>& targets) { m_dynamic = true; m_morphTargets = targets; }
         void SetMorphWeights(const std::vector<float>& weights) { m_morphWeights = weights; }
         const std::vector<MorphTarget>& GetMorphTargets() const { return m_morphTargets; }
         const std::vector<float>& GetMorphWeights() const { return m_morphWeights; }
@@ -69,11 +70,13 @@ namespace cl
 
     private:
         std::vector<Vertex> m_vertices;
+        std::vector<Vertex> m_verticesOriginal;
         std::vector<uint32_t> m_indices;
         bgfx::VertexBufferHandle m_vbh;
         bgfx::IndexBufferHandle m_ibh;
         std::vector<MorphTarget> m_morphTargets;
         std::vector<float> m_morphWeights;
+        bool m_dynamic = false;
         bool m_uploaded;
         bool m_skinned;
         Material* m_material;
