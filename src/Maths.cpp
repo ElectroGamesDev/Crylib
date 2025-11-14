@@ -511,27 +511,37 @@ namespace cl
 
     Quaternion Matrix4::GetRotation() const
     {
-        Vector3 scale = GetScale();
-        Matrix4 rotMat = *this;
+        Vector3 col0(m[0], m[1], m[2]);
+        Vector3 col1(m[4], m[5], m[6]);
+        Vector3 col2(m[8], m[9], m[10]);
 
-        if (scale.x != 0.0f)
-        {
-            rotMat.m[0] /= scale.x;
-            rotMat.m[1] /= scale.x;
-            rotMat.m[2] /= scale.x;
-        }
-        if (scale.y != 0.0f)
-        {
-            rotMat.m[4] /= scale.y;
-            rotMat.m[5] /= scale.y;
-            rotMat.m[6] /= scale.y;
-        }
-        if (scale.z != 0.0f)
-        {
-            rotMat.m[8] /= scale.z;
-            rotMat.m[9] /= scale.z;
-            rotMat.m[10] /= scale.z;
-        }
+        float len0 = col0.Length();
+        float len1 = col1.Length();
+        float len2 = col2.Length();
+
+        if (len0 < 0.0001f || len1 < 0.0001f || len2 < 0.0001f)
+            return Quaternion(0, 0, 0, 1);
+
+        Matrix4 rotMat;
+        rotMat.m[0] = col0.x / len0;
+        rotMat.m[1] = col0.y / len0;
+        rotMat.m[2] = col0.z / len0;
+        rotMat.m[3] = 0;
+
+        rotMat.m[4] = col1.x / len1;
+        rotMat.m[5] = col1.y / len1;
+        rotMat.m[6] = col1.z / len1;
+        rotMat.m[7] = 0;
+
+        rotMat.m[8] = col2.x / len2;
+        rotMat.m[9] = col2.y / len2;
+        rotMat.m[10] = col2.z / len2;
+        rotMat.m[11] = 0;
+
+        rotMat.m[12] = 0;
+        rotMat.m[13] = 0;
+        rotMat.m[14] = 0;
+        rotMat.m[15] = 1;
 
         return Quaternion::FromMatrix(rotMat);
     }
