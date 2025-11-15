@@ -90,6 +90,7 @@ namespace cl
         static Quaternion FromEuler(float yaw, float pitch, float roll);
         static Quaternion Slerp(const Quaternion& a, const Quaternion& b, float t);
         static Quaternion FromMatrix(const Matrix4& m);
+        Quaternion Inverse() const;
         Vector3 ToEuler() const;
         Matrix4 ToMatrix() const;
 

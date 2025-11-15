@@ -72,11 +72,18 @@ namespace cl
         , m_playing(false)
         , m_paused(false)
         , m_loop(true)
+        , m_blendTreeRoot(nullptr)
+        , m_blendParameter(0.0f)
+        , m_blendParameterY(0.0f)
+        , m_additiveRefClip(nullptr)
+        , m_nextLayerId(0)
     {
+        CreateLayer("Base", 0);
     }
 
     Animator::~Animator()
     {
+        delete m_blendTreeRoot;
     }
 
     void Animator::SetSkeleton(Skeleton* skeleton)
@@ -172,41 +179,49 @@ namespace cl
 
     void Animator::Update(float deltaTime, std::vector<std::shared_ptr<Mesh>>& meshes)
     {
-        if (!m_playing || m_paused || !m_currentClip)
+        if (!m_playing || m_paused)
             return;
 
-        float duration = m_currentClip->GetDuration();
-        if (duration <= 0.0f)
-            return;
+        UpdateCrossfade(deltaTime);
 
-        m_currentTime += deltaTime * m_speed;
-
-        if (m_currentTime > duration)
+        if (m_blendTreeRoot)
+            UpdateBlendTree(deltaTime);
+        else if (!m_layers.empty())
+            UpdateLayers(deltaTime, meshes);
+        else if (m_currentClip)
         {
-            if (m_loop)
+            float duration = m_currentClip->GetDuration();
+            if (duration <= 0.0f)
+                return;
+
+            m_currentTime += deltaTime * m_speed;
+            if (m_currentTime > duration)
             {
-                while (m_currentTime > duration)
-                    m_currentTime -= duration;
+                if (m_loop)
+                {
+                    while (m_currentTime > duration)
+                        m_currentTime -= duration;
+                }
+                else
+                {
+                    m_currentTime = duration;
+                    m_playing = false;
+                }
+            }
+
+            if (m_currentClip->GetAnimationType() == AnimationType::Skeletal)
+            {
+                if (m_skeleton)
+                {
+                    SampleAnimation(m_currentTime);
+                    CalculateBoneTransforms();
+                }
             }
             else
-            {
-                m_currentTime = duration;
-                m_playing = false;
-            }
-        }
+                SampleNodeAnimation(m_currentTime);
 
-        if (m_currentClip->GetAnimationType() == AnimationType::Skeletal)
-        {
-            if (m_skeleton)
-            {
-                SampleAnimation(m_currentTime);
-                CalculateBoneTransforms();
-            }
+            SampleMorphWeights(m_currentTime, meshes);
         }
-        else
-            SampleNodeAnimation(m_currentTime);
-
-        SampleMorphWeights(m_currentTime, meshes);
     }
 
     void Animator::SetTime(float time)
@@ -223,6 +238,515 @@ namespace cl
 
             m_skeleton->finalMatrices = m_boneMatrices;
         }
+    }
+
+    int Animator::GetLayerIndex(int layerId) const
+    {
+        auto it = m_layerIdToIndex.find(layerId);
+        return (it != m_layerIdToIndex.end()) ? static_cast<int>(it->second) : -1;
+    }
+
+    int Animator::CreateLayer(const std::string& name, int priority)
+    {
+        AnimationLayer layer;
+        layer.id = m_nextLayerId++;
+        layer.priority = priority;
+
+        m_layers.push_back(layer);
+
+        // Sort by priority
+        std::sort(m_layers.begin(), m_layers.end(), [](const AnimationLayer& a, const AnimationLayer& b)
+            { return a.priority < b.priority; });
+
+        // Rebuild mappings
+        m_layerIdToIndex.clear();
+        for (size_t i = 0; i < m_layers.size(); ++i)
+            m_layerIdToIndex[m_layers[i].id] = i;
+
+        m_layerNames[name] = layer.id;
+
+        return layer.id;
+    }
+
+    void Animator::RemoveLayer(int layerId)
+    {
+        auto it = m_layerIdToIndex.find(layerId);
+        if (it == m_layerIdToIndex.end())
+            return;
+
+        size_t index = it->second;
+        m_layers.erase(m_layers.begin() + index);
+        m_boneMasks.erase(layerId);
+
+        // Rebuild mappings
+        m_layerIdToIndex.clear();
+        for (size_t i = 0; i < m_layers.size(); ++i)
+            m_layerIdToIndex[m_layers[i].id] = i;
+    }
+
+    void Animator::SetLayerWeight(int layerId, float weight)
+    {
+        int index = GetLayerIndex(layerId);
+        if (index < 0)
+            return;
+
+        m_layers[index].weight = std::max(0.0f, std::min(1.0f, weight));
+    }
+
+    float Animator::GetLayerWeight(int layerId) const
+    {
+        int index = GetLayerIndex(layerId);
+        if (index < 0)
+            return 0.0f;
+
+        return m_layers[index].weight;
+    }
+
+    void Animator::SetLayerBlendMode(int layerId, BlendMode mode)
+    {
+        int index = GetLayerIndex(layerId);
+        if (index < 0)
+            return;
+
+        m_layers[index].blendMode = mode;
+    }
+
+    bool Animator::PlayAnimationOnLayer(int layerId, AnimationClip* clip, bool loop)
+    {
+        if (!clip)
+            return false;
+
+        int index = GetLayerIndex(layerId);
+        if (index < 0)
+            return false;
+
+        m_layers[index].clip = clip;
+        m_layers[index].currentTime = 0.0f;
+        m_layers[index].loop = loop;
+        m_layers[index].active = true;
+        m_playing = true;
+
+        return true;
+    }
+
+    void Animator::StopLayer(int layerId)
+    {
+        int index = GetLayerIndex(layerId);
+        if (index < 0)
+            return;
+
+        m_layers[index].active = false;
+    }
+
+    void Animator::CrossfadeToAnimation(AnimationClip* clip, float duration, bool loop, int layerIndex)
+    {
+        if (!clip || layerIndex < 0 || layerIndex >= static_cast<int>(m_layers.size()))
+            return;
+
+        m_crossfade.fromClip = m_layers[layerIndex].clip;
+        m_crossfade.toClip = clip;
+        m_crossfade.duration = duration;
+        m_crossfade.elapsed = 0.0f;
+        m_crossfade.active = true;
+        m_crossfade.targetLayer = layerIndex;
+
+        m_layers[layerIndex].loop = loop;
+    }
+
+    float Animator::GetCrossfadeProgress() const
+    {
+        if (!m_crossfade.active || m_crossfade.duration <= 0.0f)
+            return 0.0f;
+        return m_crossfade.elapsed / m_crossfade.duration;
+    }
+
+    void Animator::SetBoneMask(const std::vector<int>& boneIndices, int layerIndex)
+    {
+        m_boneMasks[layerIndex] = boneIndices;
+    }
+
+    void Animator::ClearBoneMask(int layerIndex)
+    {
+        m_boneMasks.erase(layerIndex);
+    }
+
+    const std::vector<int>& Animator::GetBoneMask(int layerIndex) const
+    {
+        static std::vector<int> empty;
+        auto it = m_boneMasks.find(layerIndex);
+        return (it != m_boneMasks.end()) ? it->second : empty;
+    }
+
+    void Animator::SyncLayerToLayer(int sourceLayerId, int targetLayerId)
+    {
+        int srcIdx = GetLayerIndex(sourceLayerId);
+        int tgtIdx = GetLayerIndex(targetLayerId);
+
+        if (srcIdx < 0 || tgtIdx < 0)
+            return;
+
+        m_layers[tgtIdx].currentTime = m_layers[srcIdx].currentTime;
+    }
+
+    void Animator::SetLayerTimeScale(int layerIndex, float scale)
+    {
+        if (layerIndex < 0 || layerIndex >= static_cast<int>(m_layers.size()))
+            return;
+
+        m_layers[layerIndex].timeScale = scale;
+    }
+
+    void Animator::UpdateLayers(float deltaTime, std::vector<std::shared_ptr<Mesh>>& meshes)
+    {
+        if (!m_skeleton || m_layers.empty())
+            return;
+
+        std::vector<Matrix4> finalTransforms(m_skeleton->bones.size());
+        for (size_t i = 0; i < finalTransforms.size(); ++i)
+            finalTransforms[i] = m_skeleton->bones[i].localTransform;
+
+        bool firstLayer = true;
+
+        for (size_t layerIdx = 0; layerIdx < m_layers.size(); ++layerIdx)
+        {
+            auto& layer = m_layers[layerIdx];
+
+            if (!layer.active || !layer.clip || layer.weight <= 0.0f)
+                continue;
+
+            float duration = layer.clip->GetDuration();
+            if (duration <= 0.0f)
+                continue;
+
+            layer.currentTime += deltaTime * m_speed * layer.timeScale;
+            if (layer.currentTime > duration)
+            {
+                if (layer.loop)
+                {
+                    while (layer.currentTime > duration)
+                        layer.currentTime -= duration;
+                }
+                else
+                {
+                    layer.currentTime = duration;
+                    layer.active = false;
+                }
+            }
+
+            std::vector<Matrix4> layerTransforms(m_skeleton->bones.size());
+            SampleAnimationToBuffer(layer.clip, layer.currentTime, layerTransforms);
+
+            if (firstLayer && layer.blendMode == BlendMode::Override)
+            {
+                finalTransforms = layerTransforms;
+                firstLayer = false;
+            }
+            else
+            {
+                switch (layer.blendMode)
+                {
+                    case BlendMode::Override:
+                    case BlendMode::Blend:
+                        BlendBoneTransforms(finalTransforms, layerTransforms, layer.weight, finalTransforms, layer.id);
+                        break;
+                    case BlendMode::Additive:
+                        ApplyAdditiveAnimation(layerTransforms, finalTransforms);
+                        break;
+                }
+            }
+        }
+
+        m_localTransforms = finalTransforms;
+        CalculateBoneTransforms();
+        SampleMorphWeights(m_layers[0].currentTime, meshes);
+    }
+
+    void Animator::UpdateCrossfade(float deltaTime)
+    {
+        if (!m_crossfade.active)
+            return;
+
+        m_crossfade.elapsed += deltaTime;
+        float t = std::min(1.0f, m_crossfade.elapsed / m_crossfade.duration);
+
+        if (t >= 1.0f)
+        {
+            PlayAnimationOnLayer(m_crossfade.targetLayer, m_crossfade.toClip, m_layers[m_crossfade.targetLayer].loop);
+            m_crossfade.active = false;
+            return;
+        }
+
+        if (!m_skeleton || !m_crossfade.fromClip || !m_crossfade.toClip)
+            return;
+
+        std::vector<Matrix4> fromTransforms(m_skeleton->bones.size());
+        std::vector<Matrix4> toTransforms(m_skeleton->bones.size());
+
+        SampleAnimationToBuffer(m_crossfade.fromClip, m_layers[m_crossfade.targetLayer].currentTime, fromTransforms);
+        SampleAnimationToBuffer(m_crossfade.toClip, m_layers[m_crossfade.targetLayer].currentTime, toTransforms);
+
+        BlendBoneTransforms(fromTransforms, toTransforms, t, m_localTransforms);
+        CalculateBoneTransforms();
+    }
+
+    void Animator::UpdateBlendTree(float deltaTime)
+    {
+        if (!m_blendTreeRoot || !m_skeleton)
+            return;
+
+        EvaluateBlendTree(m_blendTreeRoot, deltaTime, m_localTransforms);
+        CalculateBoneTransforms();
+    }
+
+    void Animator::BlendBoneTransforms(const std::vector<Matrix4>& from, const std::vector<Matrix4>& to, float weight, std::vector<Matrix4>& result, int layerId)
+    {
+        if (result.size() != from.size())
+            result.resize(from.size());
+
+        // Get bone mask for this layer
+        const auto& mask = GetBoneMask(layerId);
+        bool hasMask = !mask.empty();
+
+        // Todo: This is O(n²). This needs to be optimized
+        for (size_t i = 0; i < from.size(); ++i)
+        {
+            // Check if a mask is being used
+            if (hasMask)
+            {
+                bool isMasked = std::find(mask.begin(), mask.end(), static_cast<int>(i)) != mask.end();
+                if (!isMasked)
+                {
+                    // Bone is not in the mask, so it won't be blended
+                    result[i] = from[i];
+                    continue;
+                }
+            }
+
+            // Blend this bone
+            result[i] = BlendMatrices(from[i], to[i], weight);
+        }
+    }
+
+    void Animator::ApplyAdditiveAnimation(const std::vector<Matrix4>& additive, std::vector<Matrix4>& result)
+    {
+        // If we don't have a reference pose, sample it once
+        if (m_additiveBaseTransforms.empty() && m_additiveRefClip)
+            SampleAnimationToBuffer(m_additiveRefClip, 0.0f, m_additiveBaseTransforms);
+
+        for (size_t i = 0; i < additive.size() && i < result.size(); ++i)
+        {
+            Matrix4 baseRef = (i < m_additiveBaseTransforms.size()) ?
+                m_additiveBaseTransforms[i] : Matrix4::Identity();
+
+            // Extract components for proper additive calculation
+            Vector3 baseRefT = baseRef.GetTranslation();
+            Quaternion baseRefR = baseRef.GetRotation();
+            Vector3 baseRefS = baseRef.GetScale();
+
+            Vector3 additiveT = additive[i].GetTranslation();
+            Quaternion additiveR = additive[i].GetRotation();
+            Vector3 additiveS = additive[i].GetScale();
+
+            Vector3 resultT = result[i].GetTranslation();
+            Quaternion resultR = result[i].GetRotation();
+            Vector3 resultS = result[i].GetScale();
+
+            // Compute deltas
+            Vector3 deltaT = additiveT - baseRefT;
+            Quaternion deltaR = additiveR * baseRefR.Inverse();
+            Vector3 deltaS = Vector3(additiveS.x / (baseRefS.x != 0.0f ? baseRefS.x : 1.0f), additiveS.y / (baseRefS.y != 0.0f ? baseRefS.y : 1.0f), additiveS.z / (baseRefS.z != 0.0f ? baseRefS.z : 1.0f));
+
+            // Apply deltas
+            Vector3 finalT = resultT + deltaT;
+            Quaternion finalR = resultR * deltaR;
+            Vector3 finalS = Vector3(resultS.x * deltaS.x, resultS.y * deltaS.y, resultS.z * deltaS.z);
+
+            result[i] = Matrix4::Translate(finalT) * Matrix4::FromQuaternion(finalR) * Matrix4::Scale(finalS);
+        }
+    }
+
+    void Animator::SampleAnimationToBuffer(AnimationClip* clip, float time, std::vector<Matrix4>& buffer)
+    {
+        if (!clip || !m_skeleton)
+            return;
+
+        buffer.resize(m_skeleton->bones.size());
+        for (size_t i = 0; i < buffer.size(); ++i)
+            buffer[i] = m_skeleton->bones[i].localTransform;
+
+        struct AnimData { bool hasT = false, hasR = false, hasS = false; Vector3 t; Quaternion r; Vector3 s; };
+        std::vector<AnimData> animData(m_skeleton->bones.size());
+
+        for (const AnimationChannel& channel : clip->GetChannels())
+        {
+            int boneIndex = channel.targetBoneIndex;
+            if (boneIndex < 0 || boneIndex >= static_cast<int>(m_skeleton->bones.size()))
+                continue;
+
+            if (!channel.translations.empty())
+            {
+                animData[boneIndex].t = InterpolateTranslation(channel, time);
+                animData[boneIndex].hasT = true;
+            }
+            if (!channel.rotations.empty())
+            {
+                animData[boneIndex].r = InterpolateRotation(channel, time);
+                animData[boneIndex].hasR = true;
+            }
+            if (!channel.scales.empty())
+            {
+                animData[boneIndex].s = InterpolateScale(channel, time);
+                animData[boneIndex].hasS = true;
+            }
+        }
+
+        for (size_t i = 0; i < m_skeleton->bones.size(); ++i)
+        {
+            if (animData[i].hasT || animData[i].hasR || animData[i].hasS)
+            {
+                Vector3 t = animData[i].hasT ? animData[i].t : m_skeleton->bones[i].localTransform.GetTranslation();
+                Quaternion r = animData[i].hasR ? animData[i].r : m_skeleton->bones[i].localTransform.GetRotation();
+                Vector3 s = animData[i].hasS ? animData[i].s : m_skeleton->bones[i].localTransform.GetScale();
+                buffer[i] = Matrix4::Translate(t) * Matrix4::FromQuaternion(r) * Matrix4::Scale(s);
+            }
+        }
+    }
+
+    void Animator::EvaluateBlendTree(BlendTreeNode* node, float time, std::vector<Matrix4>& result)
+    {
+        if (!node)
+            return;
+
+        switch (node->type)
+        {
+            case BlendTreeNode::Type::Clip:
+                if (node->clip)
+                    SampleAnimationToBuffer(node->clip, time, result);
+                break;
+
+            case BlendTreeNode::Type::Blend1D:
+            {
+                if (node->children.size() < 2)
+                    return;
+
+                float param = m_blendParameter;
+                int idx = 0;
+                for (size_t i = 0; i < node->thresholds.size(); ++i)
+                {
+                    if (param >= node->thresholds[i])
+                        idx = static_cast<int>(i);
+                }
+
+                int nextIdx = std::min(idx + 1, static_cast<int>(node->children.size()) - 1);
+
+                if (idx >= static_cast<int>(node->thresholds.size()))
+                    idx = static_cast<int>(node->thresholds.size()) - 1;
+                if (nextIdx >= static_cast<int>(node->thresholds.size()))
+                    nextIdx = static_cast<int>(node->thresholds.size()) - 1;
+
+                float t0 = node->thresholds[idx];
+                float t1 = node->thresholds[nextIdx];
+                float blend = (t1 - t0 > 0.0001f) ? (param - t0) / (t1 - t0) : 0.0f;
+                blend = std::max(0.0f, std::min(1.0f, blend));
+
+                std::vector<Matrix4> temp1, temp2;
+                EvaluateBlendTree(node->children[idx], time, temp1);
+                EvaluateBlendTree(node->children[nextIdx], time, temp2);
+                BlendBoneTransforms(temp1, temp2, blend, result);
+                break;
+            }
+
+            case BlendTreeNode::Type::Blend2D:
+            {
+                if (node->children.size() < 3)
+                {
+                    // Fallback to simple blend
+                    if (node->children.size() == 2)
+                    {
+                        std::vector<Matrix4> temp1, temp2;
+                        EvaluateBlendTree(node->children[0], time, temp1);
+                        EvaluateBlendTree(node->children[1], time, temp2);
+
+                        float blend = (m_blendParameter + 1.0f) * 0.5f; // Normalize to 0-1
+                        blend = std::max(0.0f, std::min(1.0f, blend));
+                        BlendBoneTransforms(temp1, temp2, blend, result);
+                    }
+                    return;
+                }
+
+                // Find closest triangle and blend
+                Vector2 point(m_blendParameter, m_blendParameterY);
+
+                // Find 3 closest points and blend
+                // Todo: Implement a proper Delaunay triangulation
+                std::vector<std::pair<float, size_t>> distances;
+                for (size_t i = 0; i < node->positions.size() && i < node->children.size(); ++i)
+                {
+                    Vector2 pos = node->positions[i];
+                    float dist = (pos.x - point.x) * (pos.x - point.x) +
+                        (pos.y - point.y) * (pos.y - point.y);
+                    distances.push_back({ dist, i });
+                }
+
+                std::sort(distances.begin(), distances.end());
+
+                // Blend between 3 closest
+                size_t numBlend = std::min(size_t(3), distances.size());
+                std::vector<Matrix4> blended;
+
+                float totalWeight = 0.0f;
+                for (size_t i = 0; i < numBlend; ++i)
+                {
+                    float weight = 1.0f / (distances[i].first + 0.001f); // Inverse distance
+                    totalWeight += weight;
+                }
+
+                for (size_t i = 0; i < numBlend; ++i)
+                {
+                    std::vector<Matrix4> temp;
+                    EvaluateBlendTree(node->children[distances[i].second], time, temp);
+
+                    float weight = (1.0f / (distances[i].first + 0.001f)) / totalWeight;
+
+                    if (i == 0)
+                        blended = temp;
+                    else
+                        BlendBoneTransforms(blended, temp, weight / (weight + (1.0f - weight)), blended);
+                }
+
+                result = blended;
+                break;
+            }
+
+            case BlendTreeNode::Type::Additive:
+                if (!node->children.empty())
+                {
+                    EvaluateBlendTree(node->children[0], time, result);
+                    if (node->children.size() > 1)
+                    {
+                        std::vector<Matrix4> additiveTransforms;
+                        EvaluateBlendTree(node->children[1], time, additiveTransforms);
+                        ApplyAdditiveAnimation(additiveTransforms, result);
+                    }
+                }
+                break;
+        }
+    }
+
+    Matrix4 Animator::BlendMatrices(const Matrix4& a, const Matrix4& b, float t)
+    {
+        Vector3 transA = a.GetTranslation();
+        Vector3 transB = b.GetTranslation();
+        Quaternion rotA = a.GetRotation();
+        Quaternion rotB = b.GetRotation();
+        Vector3 scaleA = a.GetScale();
+        Vector3 scaleB = b.GetScale();
+
+        Vector3 trans = transA + (transB - transA) * t;
+        Quaternion rot = Quaternion::Slerp(rotA, rotB, t);
+        Vector3 scale = scaleA + (scaleB - scaleA) * t;
+
+        return Matrix4::Translate(trans) * Matrix4::FromQuaternion(rot) * Matrix4::Scale(scale);
     }
 
     void Animator::SampleAnimation(float time)

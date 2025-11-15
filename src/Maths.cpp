@@ -438,6 +438,14 @@ namespace cl
         return q.Normalize();
     }
 
+    Quaternion Quaternion::Inverse() const
+    {
+        float lenSq = x * x + y * y + z * z + w * w;
+        float invLenSq = 1.0f / fmaxf(lenSq, 1e-6f);
+        return Quaternion(-x * invLenSq, -y * invLenSq, -z * invLenSq, w * invLenSq);
+    }
+
+
     Matrix4 Matrix4::Inverse() const
     {
         Matrix4 inv;

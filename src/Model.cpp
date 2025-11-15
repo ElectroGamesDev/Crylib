@@ -454,6 +454,20 @@ namespace cl
         m_animator.StopAnimation();
     }
 
+    void Model::CrossfadeToAnimation(size_t index, float duration, bool loop)
+    {
+        AnimationClip* clip = GetAnimation(index);
+        if (clip)
+            m_animator.CrossfadeToAnimation(clip, duration, loop);
+    }
+
+    void Model::CrossfadeToAnimation(std::string_view name, float duration, bool loop)
+    {
+        AnimationClip* clip = GetAnimation(name);
+        if (clip)
+            m_animator.CrossfadeToAnimation(clip, duration, loop);
+    }
+
     void Model::UpdateAnimation(float deltaTime)
     {
         m_animator.Update(deltaTime, m_meshes);

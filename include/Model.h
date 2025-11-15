@@ -83,6 +83,8 @@ namespace cl
         bool PlayAnimationByName(std::string_view name, bool loop);
         bool PlayAnimation(AnimationClip* clip, bool loop);
         void StopAnimation();
+        void CrossfadeToAnimation(size_t index, float duration, bool loop = true);
+        void CrossfadeToAnimation(std::string_view name, float duration, bool loop = true);
 
         void UpdateAnimation(float deltaTime);
 

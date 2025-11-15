@@ -135,6 +135,62 @@ namespace cl
         NodeBased
     };
 
+    enum class BlendMode
+    {
+        Override,
+        Additive,
+        Blend
+    };
+
+    struct AnimationLayer
+    {
+        int id;
+        AnimationClip* clip;
+        float weight;
+        float timeScale;
+        float currentTime;
+        bool loop;
+        BlendMode blendMode;
+        int priority;
+        bool active;
+
+        AnimationLayer()
+            : id(-1), clip(nullptr), weight(1.0f), timeScale(1.0f), currentTime(0.0f)
+            , loop(true), blendMode(BlendMode::Override), priority(0), active(false) {}
+    };
+
+    struct BlendTreeNode
+    {
+        enum class Type
+        {
+            Clip,
+            Blend1D,
+            Blend2D,
+            Additive
+        };
+
+        Type type;
+        AnimationClip* clip;
+        std::vector<BlendTreeNode*> children;
+        std::vector<float> thresholds;
+        std::vector<Vector2> positions;
+
+        BlendTreeNode() : type(Type::Clip), clip(nullptr) {}
+        ~BlendTreeNode() { for (auto* child : children) delete child; }
+    };
+
+    struct CrossfadeInfo
+    {
+        AnimationClip* fromClip;
+        AnimationClip* toClip;
+        float duration;
+        float elapsed;
+        bool active;
+        int targetLayer;
+
+        CrossfadeInfo() : fromClip(nullptr), toClip(nullptr), duration(0.0f), elapsed(0.0f), active(false), targetLayer(0) {}
+    };
+
     class AnimationClip
     {
     public:
@@ -204,6 +260,40 @@ namespace cl
         void SetLooping(bool loop) { m_loop = loop; }
         bool IsLooping() const { return m_loop; }
 
+        // Multi-layer animation
+        int CreateLayer(const std::string& name, int priority = 0);
+        void RemoveLayer(int layerIndex);
+        void SetLayerWeight(int layerIndex, float weight);
+        float GetLayerWeight(int layerIndex) const;
+        void SetLayerBlendMode(int layerIndex, BlendMode mode);
+        bool PlayAnimationOnLayer(int layerIndex, AnimationClip* clip, bool loop = true);
+        void StopLayer(int layerIndex);
+
+        // Crossfading
+        void CrossfadeToAnimation(AnimationClip* clip, float duration, bool loop = true, int layerIndex = 0);
+        bool IsCrossfading() const { return m_crossfade.active; }
+        float GetCrossfadeProgress() const;
+
+        // Blend trees
+        void SetBlendTreeRoot(BlendTreeNode* root) { m_blendTreeRoot = root; }
+        BlendTreeNode* GetBlendTreeRoot() const { return m_blendTreeRoot; }
+        void SetBlendParameter(float value) { m_blendParameter = value; }
+        void SetBlendParameter2D(float x, float y) { m_blendParameter = x; m_blendParameterY = y; }
+        float GetBlendParameter() const { return m_blendParameter; }
+
+        // Bone masking
+        void SetBoneMask(const std::vector<int>& boneIndices, int layerIndex = 0);
+        void ClearBoneMask(int layerIndex = 0);
+        const std::vector<int>& GetBoneMask(int layerIndex = 0) const;
+
+        // Animation sync
+        void SyncLayerToLayer(int sourceLayer, int targetLayer);
+        void SetLayerTimeScale(int layerIndex, float scale);
+
+        // Additive animations
+        void SetAdditiveReferenceClip(AnimationClip* clip) { m_additiveRefClip = clip; }
+        AnimationClip* GetAdditiveReferenceClip() const { return m_additiveRefClip; }
+
         const std::vector<Matrix4>& GetBoneMatrices() const { return m_boneMatrices; }
         const std::vector<Matrix4>& GetFinalBoneMatrices() const
         {
@@ -226,11 +316,33 @@ namespace cl
         std::vector<Matrix4> m_nodeTransforms;
         std::unordered_map<int, Matrix4> m_animatedNodeTransforms;
 
+        std::vector<AnimationLayer> m_layers;
+        std::unordered_map<int, size_t> m_layerIdToIndex;
+        std::unordered_map<std::string, int> m_layerNames;
+        std::unordered_map<int, std::vector<int>> m_boneMasks;
+        CrossfadeInfo m_crossfade;
+        BlendTreeNode* m_blendTreeRoot;
+        float m_blendParameter;
+        float m_blendParameterY;
+        AnimationClip* m_additiveRefClip;
+        std::vector<Matrix4> m_additiveBaseTransforms;
+        int m_nextLayerId;
+
         float m_currentTime;
         float m_speed;
         bool m_playing;
         bool m_paused;
         bool m_loop;
+
+        int GetLayerIndex(int layerId) const;
+        void UpdateLayers(float deltaTime, std::vector<std::shared_ptr<Mesh>>& meshes);
+        void UpdateCrossfade(float deltaTime);
+        void UpdateBlendTree(float deltaTime);
+        void BlendBoneTransforms(const std::vector<Matrix4>& from, const std::vector<Matrix4>& to, float weight, std::vector<Matrix4>& result, int layerId = -1);
+        void ApplyAdditiveAnimation(const std::vector<Matrix4>& additive, std::vector<Matrix4>& result);
+        void SampleAnimationToBuffer(AnimationClip* clip, float time, std::vector<Matrix4>& buffer);
+        void EvaluateBlendTree(BlendTreeNode* node, float time, std::vector<Matrix4>& result);
+        Matrix4 BlendMatrices(const Matrix4& a, const Matrix4& b, float t);
 
         void CalculateBoneTransforms();
         void SampleAnimation(float time);
