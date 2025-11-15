@@ -12,7 +12,7 @@ Crylib provides a unified API for rendering, animation, audio, and input, while 
 - **Lightweight and modular**
 - **High-level / easy to use API**
 - **2D and 3D rendering**
-- **Skeletal and skinned mesh animation**
+- **Complete animation system** with Skeletal animations, transform animations, animation layers, animation blending, root motion, state machines, and more
 - **PBR materials** (Physically Based Rendering)
 - **Lighting system** with multiple light types
 - **3D and 2D audio** with full **spatial sound** support
