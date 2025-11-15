@@ -135,12 +135,14 @@ namespace cl
         NodeBased
     };
 
-    enum class BlendMode
+    enum class AnimationBlendMode
     {
         Override,
         Additive,
         Blend
     };
+
+    class AnimationClip;
 
     struct AnimationLayer
     {
@@ -150,13 +152,13 @@ namespace cl
         float timeScale;
         float currentTime;
         bool loop;
-        BlendMode blendMode;
+        AnimationBlendMode blendMode;
         int priority;
         bool active;
 
         AnimationLayer()
             : id(-1), clip(nullptr), weight(1.0f), timeScale(1.0f), currentTime(0.0f)
-            , loop(true), blendMode(BlendMode::Override), priority(0), active(false) {}
+            , loop(true), blendMode(AnimationBlendMode::Override), priority(0), active(false) {}
     };
 
     struct BlendTreeNode
@@ -265,7 +267,7 @@ namespace cl
         void RemoveLayer(int layerIndex);
         void SetLayerWeight(int layerIndex, float weight);
         float GetLayerWeight(int layerIndex) const;
-        void SetLayerBlendMode(int layerIndex, BlendMode mode);
+        void SetLayerBlendMode(int layerIndex, AnimationBlendMode mode);
         bool PlayAnimationOnLayer(int layerIndex, AnimationClip* clip, bool loop = true);
         void StopLayer(int layerIndex);
 

@@ -337,6 +337,8 @@ namespace cl
                 else if (currentClip->GetAnimationType() == AnimationType::NodeBased)
                     useNodeAnimation = true;
             }
+            else
+                bones = &animator->GetFinalBoneMatrices();
         }
         else if (animator && model->HasSkeleton())
             bones = &animator->GetFinalBoneMatrices();
@@ -500,9 +502,12 @@ namespace cl
                 else if (clip->GetAnimationType() == AnimationType::NodeBased)
                     skipInstancing = true;
             }
+            else
+                bones = &animator->GetFinalBoneMatrices();
         }
         else if (animator && model->HasSkeleton())
             bones = &animator->GetFinalBoneMatrices();
+
         if (skipInstancing)
         {
             DrawModel(model, model->GetPosition(), model->GetRotationQuat(), model->GetScale());

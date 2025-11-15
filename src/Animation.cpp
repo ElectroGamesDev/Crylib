@@ -115,49 +115,35 @@ namespace cl
 
     void Animator::PlayAnimation(AnimationClip* clip, bool loop)
     {
-        if (!clip)
-            return;
+        if (!clip) return;
+
+        if (m_layers.empty())
+            CreateLayer("Base", 0);
+
+        AnimationLayer& baseLayer = m_layers[0];
+
+        baseLayer.clip = clip;
+        baseLayer.currentTime = 0.0f;
+        baseLayer.loop = loop;
+        baseLayer.active = true;
+        baseLayer.weight = 1.0f;
+        baseLayer.timeScale = 1.0f;
 
         m_currentClip = clip;
         m_currentTime = 0.0f;
-        m_playing = true;
-        m_paused = false;
         m_loop = loop;
 
-        if (clip->GetAnimationType() == AnimationType::Skeletal)
+        if (m_crossfade.active && m_crossfade.targetLayer == 0)
         {
-            if (!m_skeleton)
-            {
-                std::cout << "[WARNING] Failed to play the animation \"" << clip->GetName() << "\". No skeleton assigned." << std::endl;
-                m_playing = false;
-                return;
-            }
-
-            m_localTransforms.resize(m_skeleton->bones.size());
-            m_boneMatrices.resize(m_skeleton->bones.size());
-
-            for (size_t i = 0; i < m_skeleton->bones.size(); ++i)
-                m_localTransforms[i] = m_skeleton->bones[i].localTransform;
-
-            SampleAnimation(m_currentTime);
-            CalculateBoneTransforms();
-
-            m_skeleton->finalMatrices = m_boneMatrices;
+            m_crossfade.active = false;
+            m_crossfade.fromClip = nullptr;
+            m_crossfade.toClip = nullptr;
+            m_crossfade.elapsed = 0.0f;
+            m_crossfade.duration = 0.0f;
         }
-        else
-        {
-            m_animatedNodeTransforms.clear();
-            m_nodeTransforms.clear();
-            const auto& nodeChannels = clip->GetNodeChannels();
-            int maxNodeIndex = -1;
-            for (const auto& channel : nodeChannels)
-            {
-                if (channel.targetNodeIndex > maxNodeIndex)
-                    maxNodeIndex = channel.targetNodeIndex;
-            }
-            if (maxNodeIndex >= 0)
-                m_nodeTransforms.resize(maxNodeIndex + 1, Matrix4::Identity());
-        }
+
+        m_playing = true;
+        m_paused = false;
     }
 
     void Animator::StopAnimation()
@@ -302,7 +288,7 @@ namespace cl
         return m_layers[index].weight;
     }
 
-    void Animator::SetLayerBlendMode(int layerId, BlendMode mode)
+    void Animator::SetLayerBlendMode(int layerId, AnimationBlendMode mode)
     {
         int index = GetLayerIndex(layerId);
         if (index < 0)
@@ -320,10 +306,13 @@ namespace cl
         if (index < 0)
             return false;
 
-        m_layers[index].clip = clip;
-        m_layers[index].currentTime = 0.0f;
-        m_layers[index].loop = loop;
-        m_layers[index].active = true;
+        AnimationLayer& layer = m_layers[index];
+        layer.clip = clip;
+        layer.currentTime = 0.0f;
+        layer.loop = loop;
+        layer.active = true;
+        layer.weight = 1.0f;
+        layer.timeScale = 1.0f;
         m_playing = true;
 
         return true;
@@ -340,18 +329,30 @@ namespace cl
 
     void Animator::CrossfadeToAnimation(AnimationClip* clip, float duration, bool loop, int layerIndex)
     {
-        if (!clip || layerIndex < 0 || layerIndex >= static_cast<int>(m_layers.size()))
+        if (!clip)
             return;
 
-        m_crossfade.fromClip = m_layers[layerIndex].clip;
+        if (m_layers.empty())
+            CreateLayer("Base", 0);
+
+        if (layerIndex < 0 || layerIndex >= static_cast<int>(m_layers.size()))
+            return;
+
+        AnimationLayer& layer = m_layers[layerIndex];
+
+        m_crossfade.fromClip = layer.clip;
         m_crossfade.toClip = clip;
         m_crossfade.duration = duration;
         m_crossfade.elapsed = 0.0f;
         m_crossfade.active = true;
         m_crossfade.targetLayer = layerIndex;
 
-        m_layers[layerIndex].loop = loop;
+        layer.loop = loop;
+
+        if (layer.clip == nullptr)
+            layer.currentTime = 0.0f;
     }
+
 
     float Animator::GetCrossfadeProgress() const
     {
@@ -436,7 +437,7 @@ namespace cl
             std::vector<Matrix4> layerTransforms(m_skeleton->bones.size());
             SampleAnimationToBuffer(layer.clip, layer.currentTime, layerTransforms);
 
-            if (firstLayer && layer.blendMode == BlendMode::Override)
+            if (firstLayer && layer.blendMode == AnimationBlendMode::Override)
             {
                 finalTransforms = layerTransforms;
                 firstLayer = false;
@@ -445,11 +446,11 @@ namespace cl
             {
                 switch (layer.blendMode)
                 {
-                    case BlendMode::Override:
-                    case BlendMode::Blend:
+                    case AnimationBlendMode::Override:
+                    case AnimationBlendMode::Blend:
                         BlendBoneTransforms(finalTransforms, layerTransforms, layer.weight, finalTransforms, layer.id);
                         break;
-                    case BlendMode::Additive:
+                    case AnimationBlendMode::Additive:
                         ApplyAdditiveAnimation(layerTransforms, finalTransforms);
                         break;
                 }
@@ -574,7 +575,14 @@ namespace cl
         for (size_t i = 0; i < buffer.size(); ++i)
             buffer[i] = m_skeleton->bones[i].localTransform;
 
-        struct AnimData { bool hasT = false, hasR = false, hasS = false; Vector3 t; Quaternion r; Vector3 s; };
+        struct AnimData
+        {
+            bool hasT = false, hasR = false, hasS = false;
+            Vector3 t;
+            Quaternion r;
+            Vector3 s;
+        };
+
         std::vector<AnimData> animData(m_skeleton->bones.size());
 
         for (const AnimationChannel& channel : clip->GetChannels())
@@ -660,7 +668,6 @@ namespace cl
             {
                 if (node->children.size() < 3)
                 {
-                    // Fallback to simple blend
                     if (node->children.size() == 2)
                     {
                         std::vector<Matrix4> temp1, temp2;
